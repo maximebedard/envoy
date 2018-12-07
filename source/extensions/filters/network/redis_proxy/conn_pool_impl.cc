@@ -13,6 +13,16 @@ namespace NetworkFilters {
 namespace RedisProxy {
 namespace ConnPool {
 
+std::string KeyUtils::hashtag(const std::string& s) {
+  auto start = s.find("{");
+  if (start == std::string::npos) return s;
+
+  auto end = s.find("}", start);
+  if (end == std::string::npos || end == start + 1) return s;
+
+  return s.substr(start+1, end-start-1);
+}
+
 ConfigImpl::ConfigImpl(
     const envoy::config::filter::network::redis_proxy::v2::RedisProxy::ConnPoolSettings& config)
     : op_timeout_(PROTOBUF_GET_MS_REQUIRED(config, op_timeout)) {}

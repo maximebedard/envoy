@@ -449,6 +449,32 @@ TEST_F(RedisConnPoolImplTest, Basic) {
   tls_.shutdownThread();
 };
 
+TEST_F(RedisConnPoolImplTest, BasicHashTag) {
+  InSequence s;
+
+  setup();
+
+  RespValue value;
+  MockPoolRequest active_request;
+  MockPoolCallbacks callbacks;
+  MockClient* client = new NiceMock<MockClient>();
+
+  EXPECT_CALL(cm_.thread_local_cluster_.lb_, chooseHost(_))
+      .WillOnce(Invoke([&](Upstream::LoadBalancerContext* context) -> Upstream::HostConstSharedPtr {
+        EXPECT_EQ(context->computeHashKey().value(), std::hash<std::string>()("foo"));
+        EXPECT_EQ(context->metadataMatchCriteria(), nullptr);
+        EXPECT_EQ(context->downstreamConnection(), nullptr);
+        return cm_.thread_local_cluster_.lb_.host_;
+      }));
+  EXPECT_CALL(*this, create_(_)).WillOnce(Return(client));
+  EXPECT_CALL(*client, makeRequest(Ref(value), Ref(callbacks))).WillOnce(Return(&active_request));
+  PoolRequest* request = conn_pool_->makeRequest("{foo}.bar", value, callbacks);
+  EXPECT_EQ(&active_request, request);
+
+  EXPECT_CALL(*client, close());
+  tls_.shutdownThread();
+};
+
 // Conn pool created when no cluster exists at creation time. Dynamic cluster creation and removal
 // work correctly.
 TEST_F(RedisConnPoolImplTest, NoClusterAtConstruction) {
@@ -573,6 +599,13 @@ TEST_F(RedisConnPoolImplTest, RemoteClose) {
   client->raiseEvent(Network::ConnectionEvent::RemoteClose);
 
   tls_.shutdownThread();
+}
+
+TEST(KeyUtils, HashTag) {
+  EXPECT_EQ("foo", KeyUtils::hashtag("{foo}.bar"));
+  EXPECT_EQ("foo{}{bar}", KeyUtils::hashtag("foo{}{bar}"));
+  EXPECT_EQ("{bar", KeyUtils::hashtag("foo{{bar}}zap"));
+  EXPECT_EQ("bar", KeyUtils::hashtag("foo{bar}{zap}"));
 }
 
 } // namespace ConnPool

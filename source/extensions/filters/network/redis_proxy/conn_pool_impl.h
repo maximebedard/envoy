@@ -118,6 +118,11 @@ private:
   DecoderFactoryImpl decoder_factory_;
 };
 
+class KeyUtils {
+public:
+  static std::string hashtag(const std::string& s);
+};
+
 class InstanceImpl : public Instance {
 public:
   InstanceImpl(
@@ -172,7 +177,7 @@ private:
   };
 
   struct LbContextImpl : public Upstream::LoadBalancerContextBase {
-    LbContextImpl(const std::string& hash_key) : hash_key_(std::hash<std::string>()(hash_key)) {}
+    LbContextImpl(const std::string& hash_key) : hash_key_(std::hash<std::string>()(KeyUtils::hashtag(hash_key))) {}
     // TODO(danielhochman): convert to HashUtil::xxHash64 when we have a migration strategy.
     // Upstream::LoadBalancerContext
     absl::optional<uint64_t> computeHashKey() override { return hash_key_; }
