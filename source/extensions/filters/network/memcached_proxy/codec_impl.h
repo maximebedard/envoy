@@ -37,6 +37,8 @@ public:
   uint8_t vbucketIdOrStatus() const override { return vbucket_id_or_status_; }
   uint32_t opaque() const override { return opaque_; }
   uint64_t cas() const override { return cas_; }
+protected:
+  bool equals(const Request& rhs) const;
 private:
   const uint8_t data_type_;
   const uint8_t vbucket_id_or_status_;
@@ -274,8 +276,7 @@ public:
   void fromBuffer(uint16_t, uint8_t, uint32_t, Buffer::Instance&) override {}
 
   // VersionRequest
-  // TODO: actually implement this.
-  bool operator==(const VersionRequest&) const override { return true; }
+  bool operator==(const VersionRequest& rhs) const override { return RequestImpl::equals(rhs); }
 };
 
 class EncoderImpl : public Encoder, Logger::Loggable<Logger::Id::memcached> {

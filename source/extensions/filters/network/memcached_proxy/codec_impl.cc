@@ -24,6 +24,13 @@ std::string BufferHelper::drainString(Buffer::Instance& data, uint32_t length) {
   return ret;
 }
 
+bool RequestImpl::equals(const Request& rhs) const {
+  return dataType() == rhs.dataType() &&
+    vbucketIdOrStatus() == rhs.vbucketIdOrStatus() &&
+    opaque() == rhs.opaque() &&
+    cas() == rhs.cas();
+}
+
 void GetLikeRequestImpl::fromBuffer(uint16_t key_length, uint8_t, uint32_t, Buffer::Instance& data) {
   key_ = BufferHelper::drainString(data, key_length);
 }
@@ -44,10 +51,7 @@ void SetLikeRequestImpl::fromBuffer(uint16_t key_length, uint8_t, uint32_t body_
 }
 
 bool SetLikeRequestImpl::equals(const SetLikeRequest& rhs) const {
-  return dataType() == rhs.dataType() &&
-    vbucketIdOrStatus() == rhs.vbucketIdOrStatus() &&
-    opaque() == rhs.opaque() &&
-    cas() == rhs.cas() &&
+  return RequestImpl::equals(rhs) &&
     key() == rhs.key() &&
     body() == rhs.body() &&
     expiration() == rhs.expiration() &&
@@ -62,10 +66,7 @@ void CounterLikeRequestImpl::fromBuffer(uint16_t key_length, uint8_t, uint32_t, 
 }
 
 bool CounterLikeRequestImpl::equals(const CounterLikeRequest& rhs) const {
-  return dataType() == rhs.dataType() &&
-    vbucketIdOrStatus() == rhs.vbucketIdOrStatus() &&
-    opaque() == rhs.opaque() &&
-    cas() == rhs.cas() &&
+  return RequestImpl::equals(rhs) &&
     key() == rhs.key() &&
     amount() == rhs.amount() &&
     initialValue() == rhs.initialValue() &&
@@ -78,10 +79,7 @@ void AppendLikeRequestImpl::fromBuffer(uint16_t key_length, uint8_t, uint32_t bo
 }
 
 bool AppendLikeRequestImpl::equals(const AppendLikeRequest& rhs) const {
-  return dataType() == rhs.dataType() &&
-    vbucketIdOrStatus() == rhs.vbucketIdOrStatus() &&
-    opaque() == rhs.opaque() &&
-    cas() == rhs.cas() &&
+  return RequestImpl::equals(rhs) &&
     key() == rhs.key() &&
     body() == rhs.body();
 }
