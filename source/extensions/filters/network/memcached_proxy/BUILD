@@ -29,18 +29,6 @@ envoy_cc_library(
 )
 
 envoy_cc_library(
-    name = "config",
-    srcs = ["config.cc"],
-    hdrs = ["config.h"],
-    deps = [
-        ":proxy_lib",
-        "//include/envoy/registry",
-        "//source/extensions/filters/network:well_known_names",
-        "//source/extensions/filters/network/common:factory_base_lib",
-    ],
-)
-
-envoy_cc_library(
     name = "proxy_lib",
     srcs = ["proxy.cc"],
     hdrs = ["proxy.h"],
@@ -65,5 +53,19 @@ envoy_cc_library(
         "//source/common/singleton:const_singleton",
         "//source/extensions/filters/network:well_known_names",
         "@envoy_api//envoy/config/filter/network/memcached_proxy/v2:memcached_proxy_cc",
+    ],
+)
+
+
+envoy_cc_library(
+    name = "config",
+    srcs = ["config.cc"],
+    hdrs = ["config.h"],
+    deps = [
+        ":proxy_lib",
+        "//include/envoy/registry",
+        "//source/extensions/filters/network:well_known_names",
+        "//source/extensions/filters/network/common:factory_base_lib",
+        "//source/common/common:minimal_logger_lib",
     ],
 )

@@ -37,58 +37,61 @@ ProxyFilter::ProxyFilter(
       // drain_decision_(drain_decision),
       // generator_(generator),
        // time_source_(time_source),
-       decoder_(factory.create(*this)), encoder_(std::move(encoder))
-       {
-}
+       decoder_(factory.create(*this)), encoder_(std::move(encoder)) {}
 
-void ProxyFilter::decodeGet(GetRequestPtr&& message) {
+void ProxyFilter::decodeGet(GetRequestPtr&& request) {
   stats_.op_get_.inc();
-  ENVOY_LOG(trace, "decoded `GET` key={}", message->key());
+  ENVOY_LOG(trace, "decoded `GET` key={}", request->key());
 }
 
-void ProxyFilter::decodeGetk(GetkRequestPtr&& message) {
+void ProxyFilter::decodeGetk(GetkRequestPtr&& request) {
   stats_.op_getk_.inc();
-  ENVOY_LOG(trace, "decoded `GETK` key={}", message->key());
+  ENVOY_LOG(trace, "decoded `GETK` key={}", request->key());
 }
 
-void ProxyFilter::decodeDelete(DeleteRequestPtr&& message) {
+void ProxyFilter::decodeDelete(DeleteRequestPtr&& request) {
   stats_.op_delete_.inc();
-  ENVOY_LOG(trace, "decoded `DELETE` key={}", message->key());
+  ENVOY_LOG(trace, "decoded `DELETE` key={}", request->key());
 }
 
-void ProxyFilter::decodeSet(SetRequestPtr&& message) {
+void ProxyFilter::decodeSet(SetRequestPtr&& request) {
   stats_.op_set_.inc();
-  ENVOY_LOG(trace, "decoded `SET` key={}, body={}", message->key(), message->body());
+  ENVOY_LOG(trace, "decoded `SET` key={}, body={}", request->key(), request->body());
 }
 
-void ProxyFilter::decodeAdd(AddRequestPtr&& message) {
+void ProxyFilter::decodeAdd(AddRequestPtr&& request) {
   stats_.op_add_.inc();
-  ENVOY_LOG(trace, "decoded `ADD` key={}, body={}", message->key(), message->body());
+  ENVOY_LOG(trace, "decoded `ADD` key={}, body={}", request->key(), request->body());
 }
 
-void ProxyFilter::decodeReplace(ReplaceRequestPtr&& message) {
+void ProxyFilter::decodeReplace(ReplaceRequestPtr&& request) {
   stats_.op_replace_.inc();
-  ENVOY_LOG(trace, "decoded `REPLACE` key={}, body={}", message->key(), message->body());
+  ENVOY_LOG(trace, "decoded `REPLACE` key={}, body={}", request->key(), request->body());
 }
 
-void ProxyFilter::decodeIncrement(IncrementRequestPtr&& message) {
+void ProxyFilter::decodeIncrement(IncrementRequestPtr&& request) {
   stats_.op_increment_.inc();
-  ENVOY_LOG(trace, "decoded `INCREMENT` key={}, amount={}, initial_value={}", message->key(), message->amount(), message->initialValue());
+  ENVOY_LOG(trace, "decoded `INCREMENT` key={}, amount={}, initial_value={}", request->key(), request->amount(), request->initialValue());
 }
 
-void ProxyFilter::decodeDecrement(DecrementRequestPtr&& message) {
+void ProxyFilter::decodeDecrement(DecrementRequestPtr&& request) {
   stats_.op_decrement_.inc();
-  ENVOY_LOG(trace, "decoded `DECREMENT` key={}, amount={}, initial_value={}", message->key(), message->amount(), message->initialValue());
+  ENVOY_LOG(trace, "decoded `DECREMENT` key={}, amount={}, initial_value={}", request->key(), request->amount(), request->initialValue());
 }
 
-void ProxyFilter::decodeAppend(AppendRequestPtr&& message) {
+void ProxyFilter::decodeAppend(AppendRequestPtr&& request) {
   stats_.op_append_.inc();
-  ENVOY_LOG(trace, "decoded `APPEND` key={}, body={}", message->key(), message->body());
+  ENVOY_LOG(trace, "decoded `APPEND` key={}, body={}", request->key(), request->body());
 }
 
-void ProxyFilter::decodePrepend(PrependRequestPtr&& message) {
+void ProxyFilter::decodePrepend(PrependRequestPtr&& request) {
   stats_.op_prepend_.inc();
-  ENVOY_LOG(trace, "decoded `PREPEND` key={}, body={}", message->key(), message->body());
+  ENVOY_LOG(trace, "decoded `PREPEND` key={}, body={}", request->key(), request->body());
+}
+
+void ProxyFilter::decodeVersion(VersionRequestPtr&&) {
+  stats_.op_version_.inc();
+  ENVOY_LOG(trace, "decoded `VERSION`");
 }
 
 void ProxyFilter::onEvent(Network::ConnectionEvent event) {
@@ -108,8 +111,8 @@ void ProxyFilter::onEvent(Network::ConnectionEvent event) {
   //   stats_.cx_destroy_remote_with_active_rq_.inc();
   // }
 }
-
 Network::FilterStatus ProxyFilter::onData(Buffer::Instance& data, bool) {
+  ENVOY_LOG(info, "downstream -> upstream => bytes={}", data.length());
   read_buffer_.add(data);
 
   try {
@@ -119,10 +122,12 @@ Network::FilterStatus ProxyFilter::onData(Buffer::Instance& data, bool) {
     stats_.decoding_error_.inc();
   }
 
+  // blindly forward the data upstream
   return Network::FilterStatus::Continue;
 }
 
 Network::FilterStatus ProxyFilter::onWrite(Buffer::Instance& data, bool) {
+  ENVOY_LOG(info, "upstream -> downstream => bytes={}", data.length());
   write_buffer_.add(data);
 
   try {

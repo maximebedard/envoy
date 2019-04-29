@@ -35,6 +35,7 @@ public:
     OP_APPENDQ = 0x19,
     OP_PREPEND = 0x0f,
     OP_PREPENDQ = 0x1a,
+    OP_VERSION = 0x0b,
   };
 
   // Define some constants used in memcached messages encoding
@@ -217,6 +218,17 @@ public:
 typedef std::unique_ptr<PrependRequest> PrependRequestPtr;
 
 /**
+ * Memcached OP_VERSION message.
+ */
+class VersionRequest : public virtual Request {
+public:
+  virtual ~VersionRequest() = default;
+  virtual bool operator==(const VersionRequest& rhs) const PURE;
+};
+
+typedef std::unique_ptr<VersionRequest> VersionRequestPtr;
+
+/**
  * General callbacks for dispatching decoded memcached messages to a sink.
  */
 class DecoderCallbacks {
@@ -233,6 +245,7 @@ public:
   virtual void decodeDecrement(DecrementRequestPtr&& message) PURE;
   virtual void decodeAppend(AppendRequestPtr&& message) PURE;
   virtual void decodePrepend(PrependRequestPtr&& message) PURE;
+  virtual void decodeVersion(VersionRequestPtr&& message) PURE;
 };
 
 /**
@@ -277,6 +290,7 @@ public:
   virtual void encodeDecrement(const DecrementRequest& request, Buffer::Instance& out) PURE;
   virtual void encodeAppend(const AppendRequest& request, Buffer::Instance& out) PURE;
   virtual void encodePrepend(const PrependRequest& request, Buffer::Instance& out) PURE;
+  virtual void encodeVersion(const VersionRequest& request, Buffer::Instance& out) PURE;
 };
 
 typedef std::unique_ptr<Encoder> EncoderPtr;

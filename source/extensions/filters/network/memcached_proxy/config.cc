@@ -14,7 +14,7 @@ namespace Extensions {
 namespace NetworkFilters {
 namespace MemcachedProxy {
 
-Network::FilterFactoryCb MemcachedProxyFilterConfigFactory::createFilterFactoryFromProtoTyped(
+Network::FilterFactoryCb ConfigFactory::createFilterFactoryFromProtoTyped(
     const envoy::config::filter::network::memcached_proxy::v2::MemcachedProxy& proto_config,
     Server::Configuration::FactoryContext& context) {
 
@@ -24,7 +24,6 @@ Network::FilterFactoryCb MemcachedProxyFilterConfigFactory::createFilterFactoryF
 
   return [stat_prefix, &context](Network::FilterManager& filter_manager) -> void {
     DecoderFactoryImpl factory;
-
     filter_manager.addFilter(std::make_shared<ProxyFilter>(
         stat_prefix, context.scope(),
         // context.runtime(),
@@ -37,7 +36,7 @@ Network::FilterFactoryCb MemcachedProxyFilterConfigFactory::createFilterFactoryF
 /**
  * Static registration for the memcached filter. @see RegisterFactory.
  */
-REGISTER_FACTORY(MemcachedProxyFilterConfigFactory,
+REGISTER_FACTORY(ConfigFactory,
                  Server::Configuration::NamedNetworkFilterConfigFactory);
 
 }

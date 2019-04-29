@@ -102,7 +102,7 @@ bool DecoderImpl::decodeRequest(Buffer::Instance& data) {
   case Message::OpCode::OP_GETQ: {
     auto message = std::make_unique<GetRequestImpl>(data_type, vbucket_id_or_status, opaque, cas);
     message->fromBuffer(key_length, extras_length, body_length, data);
-    ENVOY_LOG(trace, "decoded `GET` key={}", message->key());
+    ENVOY_LOG(info, "decoded `GET` key={}", message->key());
     callbacks_.decodeGet(std::move(message));
     break;
   }
@@ -111,7 +111,7 @@ bool DecoderImpl::decodeRequest(Buffer::Instance& data) {
   case Message::OpCode::OP_GETKQ: {
     auto message = std::make_unique<GetkRequestImpl>(data_type, vbucket_id_or_status, opaque, cas);
     message->fromBuffer(key_length, extras_length, body_length, data);
-    ENVOY_LOG(trace, "decoded `GETK` key={}", message->key());
+    ENVOY_LOG(info, "decoded `GETK` key={}", message->key());
     callbacks_.decodeGetk(std::move(message));
     break;
   }
@@ -120,7 +120,7 @@ bool DecoderImpl::decodeRequest(Buffer::Instance& data) {
   case Message::OpCode::OP_DELETEQ: {
     auto message = std::make_unique<DeleteRequestImpl>(data_type, vbucket_id_or_status, opaque, cas);
     message->fromBuffer(key_length, extras_length, body_length, data);
-    ENVOY_LOG(trace, "decoded `DELETE` key={}", message->key());
+    ENVOY_LOG(info, "decoded `DELETE` key={}", message->key());
     callbacks_.decodeDelete(std::move(message));
     break;
   }
@@ -129,7 +129,7 @@ bool DecoderImpl::decodeRequest(Buffer::Instance& data) {
   case Message::OpCode::OP_SETQ: {
     auto message = std::make_unique<SetRequestImpl>(data_type, vbucket_id_or_status, opaque, cas);
     message->fromBuffer(key_length, extras_length, body_length, data);
-    ENVOY_LOG(trace, "decoded `SET` key={}, body={}", message->key(), message->body());
+    ENVOY_LOG(info, "decoded `SET` key={}, body={}", message->key(), message->body());
     callbacks_.decodeSet(std::move(message));
     break;
   }
@@ -138,7 +138,7 @@ bool DecoderImpl::decodeRequest(Buffer::Instance& data) {
   case Message::OpCode::OP_ADDQ: {
     auto message = std::make_unique<AddRequestImpl>(data_type, vbucket_id_or_status, opaque, cas);
     message->fromBuffer(key_length, extras_length, body_length, data);
-    ENVOY_LOG(trace, "decoded `ADD` key={}, body={}", message->key(), message->body());
+    ENVOY_LOG(info, "decoded `ADD` key={}, body={}", message->key(), message->body());
     callbacks_.decodeAdd(std::move(message));
     break;
   }
@@ -147,7 +147,7 @@ bool DecoderImpl::decodeRequest(Buffer::Instance& data) {
   case Message::OpCode::OP_REPLACEQ: {
     auto message = std::make_unique<ReplaceRequestImpl>(data_type, vbucket_id_or_status, opaque, cas);
     message->fromBuffer(key_length, extras_length, body_length, data);
-    ENVOY_LOG(trace, "decoded `REPLACE` key={}, body={}", message->key(), message->body());
+    ENVOY_LOG(info, "decoded `REPLACE` key={}, body={}", message->key(), message->body());
     callbacks_.decodeReplace(std::move(message));
     break;
   }
@@ -156,7 +156,7 @@ bool DecoderImpl::decodeRequest(Buffer::Instance& data) {
   case Message::OpCode::OP_INCREMENTQ: {
     auto message = std::make_unique<IncrementRequestImpl>(data_type, vbucket_id_or_status, opaque, cas);
     message->fromBuffer(key_length, extras_length, body_length, data);
-    ENVOY_LOG(trace, "decoded `INCREMENT` key={}, amount={}, initial_value={}", message->key(), message->amount(), message->initialValue());
+    ENVOY_LOG(info, "decoded `INCREMENT` key={}, amount={}, initial_value={}", message->key(), message->amount(), message->initialValue());
     callbacks_.decodeIncrement(std::move(message));
     break;
   }
@@ -165,7 +165,7 @@ bool DecoderImpl::decodeRequest(Buffer::Instance& data) {
   case Message::OpCode::OP_DECREMENTQ: {
     auto message = std::make_unique<DecrementRequestImpl>(data_type, vbucket_id_or_status, opaque, cas);
     message->fromBuffer(key_length, extras_length, body_length, data);
-    ENVOY_LOG(trace, "decoded `DECREMENT` key={}, amount={}, initial_value={}", message->key(), message->amount(), message->initialValue());
+    ENVOY_LOG(info, "decoded `DECREMENT` key={}, amount={}, initial_value={}", message->key(), message->amount(), message->initialValue());
     callbacks_.decodeDecrement(std::move(message));
     break;
   }
@@ -174,7 +174,7 @@ bool DecoderImpl::decodeRequest(Buffer::Instance& data) {
   case Message::OpCode::OP_APPENDQ: {
     auto message = std::make_unique<AppendRequestImpl>(data_type, vbucket_id_or_status, opaque, cas);
     message->fromBuffer(key_length, extras_length, body_length, data);
-    ENVOY_LOG(trace, "decoded `APPEND` key={}, body={}", message->key(), message->body());
+    ENVOY_LOG(info, "decoded `APPEND` key={}, body={}", message->key(), message->body());
     callbacks_.decodeAppend(std::move(message));
     break;
   }
@@ -183,8 +183,16 @@ bool DecoderImpl::decodeRequest(Buffer::Instance& data) {
   case Message::OpCode::OP_PREPENDQ: {
     auto message = std::make_unique<PrependRequestImpl>(data_type, vbucket_id_or_status, opaque, cas);
     message->fromBuffer(key_length, extras_length, body_length, data);
-    ENVOY_LOG(trace, "decoded `PREPEND` key={}, body={}", message->key(), message->body());
+    ENVOY_LOG(info, "decoded `PREPEND` key={}, body={}", message->key(), message->body());
     callbacks_.decodePrepend(std::move(message));
+    break;
+  }
+
+  case Message::OpCode::OP_VERSION: {
+    auto message = std::make_unique<VersionRequestImpl>(data_type, vbucket_id_or_status, opaque, cas);
+    message->fromBuffer(key_length, extras_length, body_length, data);
+    ENVOY_LOG(info, "decoded `VERSION`");
+    callbacks_.decodeVersion(std::move(message));
     break;
   }
 
@@ -195,13 +203,15 @@ bool DecoderImpl::decodeRequest(Buffer::Instance& data) {
   return true;
 }
 
-bool DecoderImpl::decodeResponse(Buffer::Instance&) {
+bool DecoderImpl::decodeResponse(Buffer::Instance& data) {
   // TODO: ???
+  ENVOY_LOG(info, "reply");
+  data.drain(data.length());
   return true;
 }
 
 bool DecoderImpl::decode(Buffer::Instance& data) {
-  ENVOY_LOG(trace, "decoding {} bytes", data.length());
+  ENVOY_LOG(info, "decoding {} bytes", data.length());
   if (data.length() < Message::HeaderSize) {
     return false;
   }
@@ -218,7 +228,7 @@ bool DecoderImpl::decode(Buffer::Instance& data) {
     throw EnvoyException(fmt::format("invalid memcached message type {}", magic));
   }
 
-  ENVOY_LOG(trace, "{} bytes remaining after decoding", data.length());
+  ENVOY_LOG(info, "{} bytes remaining after decoding", data.length());
   return true;
 }
 
@@ -310,6 +320,10 @@ void EncoderImpl::encodeAppendLike(const AppendLikeRequest& request, Message::Op
   encodeRequestHeader(request.key().length(), 0, request.body().length(), request, op_code, out);
   out.add(request.key());
   out.add(request.body());
+}
+
+void EncoderImpl::encodeVersion(const VersionRequest& request, Buffer::Instance& out) {
+  encodeRequestHeader(0, 0, 0, request, Message::OpCode::OP_VERSION, out);
 }
 
 }

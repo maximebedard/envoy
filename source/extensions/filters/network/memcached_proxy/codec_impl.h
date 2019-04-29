@@ -264,6 +264,20 @@ public:
   bool operator==(const PrependRequest& rhs) const override { return equals(rhs); }
 };
 
+class VersionRequestImpl : public RequestImpl,
+                           public virtual VersionRequest {
+public:
+  VersionRequestImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) :
+  RequestImpl(data_type, vbucket_id_or_status, opaque, cas) {}
+
+  // RequestImpl
+  void fromBuffer(uint16_t, uint8_t, uint32_t, Buffer::Instance&) override {}
+
+  // VersionRequest
+  // TODO: actually implement this.
+  bool operator==(const VersionRequest&) const override { return true; }
+};
+
 class EncoderImpl : public Encoder, Logger::Loggable<Logger::Id::memcached> {
 public:
   EncoderImpl() {}
@@ -279,6 +293,7 @@ public:
   void encodeDecrement(const DecrementRequest& request, Buffer::Instance& out) override;
   void encodeAppend(const AppendRequest& request, Buffer::Instance& out) override;
   void encodePrepend(const PrependRequest& request, Buffer::Instance& out) override;
+  void encodeVersion(const VersionRequest& request, Buffer::Instance& out) override;
 private:
   void encodeGetLike(const GetLikeRequest& request, Message::OpCode op_code, Buffer::Instance& out);
   void encodeSetLike(const SetLikeRequest& request, Message::OpCode op_code, Buffer::Instance& out);

@@ -36,6 +36,7 @@ namespace MemcachedProxy {
 // clang-format off
 #define ALL_MEMCACHED_PROXY_STATS(COUNTER, GAUGE, HISTOGRAM) \
   COUNTER(decoding_error) \
+  COUNTER(encoding_error) \
   COUNTER(op_get) \
   COUNTER(op_getk) \
   COUNTER(op_delete) \
@@ -46,6 +47,7 @@ namespace MemcachedProxy {
   COUNTER(op_decrement) \
   COUNTER(op_append) \
   COUNTER(op_prepend) \
+  COUNTER(op_version) \
   COUNTER(cx_drain_close) \
 // clang-format on
 
@@ -83,23 +85,23 @@ public:
   // Network::WriteFilter
   Network::FilterStatus onWrite(Buffer::Instance& data, bool end_stream) override;
 
-  // MemcachedProxy::DecoderCallback
-  void decodeGet(GetRequestPtr&& message) override;
-  void decodeGetk(GetkRequestPtr&& message) override;
-  void decodeDelete(DeleteRequestPtr&& message) override;
-  void decodeSet(SetRequestPtr&& message) override;
-  void decodeAdd(AddRequestPtr&& message) override;
-  void decodeReplace(ReplaceRequestPtr&& message) override;
-  void decodeIncrement(IncrementRequestPtr&& message) override;
-  void decodeDecrement(DecrementRequestPtr&& message) override;
-  void decodeAppend(AppendRequestPtr&& message) override;
-  void decodePrepend(PrependRequestPtr&& message) override;
-
   // Network::ConnectionCallbacks
   void onEvent(Network::ConnectionEvent event) override;
   void onAboveWriteBufferHighWatermark() override {}
   void onBelowWriteBufferLowWatermark() override {}
 
+  // MemcachedProxy::DecoderCallback
+  void decodeGet(GetRequestPtr&& request) override;
+  void decodeGetk(GetkRequestPtr&& request) override;
+  void decodeDelete(DeleteRequestPtr&& request) override;
+  void decodeSet(SetRequestPtr&& request) override;
+  void decodeAdd(AddRequestPtr&& request) override;
+  void decodeReplace(ReplaceRequestPtr&& request) override;
+  void decodeIncrement(IncrementRequestPtr&& request) override;
+  void decodeDecrement(DecrementRequestPtr&& request) override;
+  void decodeAppend(AppendRequestPtr&& request) override;
+  void decodePrepend(PrependRequestPtr&& request) override;
+  void decodeVersion(VersionRequestPtr&& request) override;
 private:
   MemcachedProxyStats generateStats(const std::string& prefix, Stats::Scope& scope) {
     return MemcachedProxyStats{ALL_MEMCACHED_PROXY_STATS(POOL_COUNTER_PREFIX(scope, prefix),

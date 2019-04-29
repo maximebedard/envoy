@@ -30,6 +30,7 @@ public:
   void decodeDecrement(DecrementRequestPtr&& message) override { decodeDecrement_(message); }
   void decodeAppend(AppendRequestPtr&& message) override { decodeAppend_(message); }
   void decodePrepend(PrependRequestPtr&& message) override { decodePrepend_(message); }
+  void decodeVersion(VersionRequestPtr&& message) override { decodeVersion_(message); }
 
   MOCK_METHOD1(decodeGet_, void(GetRequestPtr& message));
   MOCK_METHOD1(decodeGetk_, void(GetkRequestPtr& message));
@@ -41,6 +42,7 @@ public:
   MOCK_METHOD1(decodeDecrement_, void(DecrementRequestPtr& message));
   MOCK_METHOD1(decodeAppend_, void(AppendRequestPtr& message));
   MOCK_METHOD1(decodePrepend_, void(PrependRequestPtr& message));
+  MOCK_METHOD1(decodeVersion_, void(VersionRequestPtr& message));
 };
 
 class MemcachedCodecImplTest : public testing::Test {
@@ -313,6 +315,14 @@ TEST_F(MemcachedCodecImplTest, PrependRoundTrip) {
 
   encoder_.encodePrepend(prepend, output_);
   EXPECT_CALL(callbacks_, decodePrepend_(Pointee(Eq(prepend))));
+  decoder_.onData(output_);
+}
+
+TEST_F(MemcachedCodecImplTest, VersionRoundTrip) {
+  VersionRequestImpl version(3, 3, 3, 3);
+
+  encoder_.encodeVersion(version, output_);
+  EXPECT_CALL(callbacks_, decodeVersion_(Pointee(Eq(version))));
   decoder_.onData(output_);
 }
 
