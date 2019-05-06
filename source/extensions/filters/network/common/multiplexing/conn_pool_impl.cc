@@ -26,14 +26,14 @@ InstanceImpl::InstanceImpl(
 }
 
 Common::Redis::Client::PoolRequest*
-InstanceImpl::makeRequest(const std::string& key, const Common::Redis::RespValue& request,
+InstanceImpl::makeRequest(const std::string& key, const Common::Redis::Encodable& request,
                           Common::Redis::Client::PoolCallbacks& callbacks) {
   return tls_->getTyped<ThreadLocalPool>().makeRequest(key, request, callbacks);
 }
 
 Common::Redis::Client::PoolRequest*
 InstanceImpl::makeRequestToHost(const std::string& host_address,
-                                const Common::Redis::RespValue& request,
+                                const Common::Redis::Encodable& request,
                                 Common::Redis::Client::PoolCallbacks& callbacks) {
   return tls_->getTyped<ThreadLocalPool>().makeRequestToHost(host_address, request, callbacks);
 }
@@ -117,7 +117,7 @@ void InstanceImpl::ThreadLocalPool::onHostsRemoved(
 
 Common::Redis::Client::PoolRequest*
 InstanceImpl::ThreadLocalPool::makeRequest(const std::string& key,
-                                           const Common::Redis::RespValue& request,
+                                           const Common::Redis::Encodable& request,
                                            Common::Redis::Client::PoolCallbacks& callbacks) {
   if (cluster_ == nullptr) {
     ASSERT(client_map_.empty());
@@ -150,7 +150,7 @@ InstanceImpl::ThreadLocalPool::makeRequest(const std::string& key,
 
 Common::Redis::Client::PoolRequest*
 InstanceImpl::ThreadLocalPool::makeRequestToHost(const std::string& host_address,
-                                                 const Common::Redis::RespValue& request,
+                                                 const Common::Redis::Encodable& request,
                                                  Common::Redis::Client::PoolCallbacks& callbacks) {
   if (cluster_ == nullptr) {
     ASSERT(client_map_.empty());

@@ -57,8 +57,7 @@ private:
 class ClientImpl : public Client, public DecoderCallbacks, public Network::ConnectionCallbacks {
 public:
   static ClientPtr create(Upstream::HostConstSharedPtr host, Event::Dispatcher& dispatcher,
-                          EncoderPtr&& encoder, DecoderFactory& decoder_factory,
-                          const Config& config);
+                          DecoderFactory& decoder_factory, const Config& config);
 
   ~ClientImpl();
 
@@ -67,7 +66,8 @@ public:
     connection_->addConnectionCallbacks(callbacks);
   }
   void close() override;
-  PoolRequest* makeRequest(const RespValue& request, PoolCallbacks& callbacks) override;
+  PoolRequest* makeRequest(const Common::Redis::Encodable& request,
+                           PoolCallbacks& callbacks) override;
   void flushBufferAndResetTimer();
 
 private:
@@ -95,7 +95,7 @@ private:
     bool canceled_{};
   };
 
-  ClientImpl(Upstream::HostConstSharedPtr host, Event::Dispatcher& dispatcher, EncoderPtr&& encoder,
+  ClientImpl(Upstream::HostConstSharedPtr host, Event::Dispatcher& dispatcher,
              DecoderFactory& decoder_factory, const Config& config);
   void onConnectOrOpTimeout();
   void onData(Buffer::Instance& data);
@@ -111,7 +111,6 @@ private:
 
   Upstream::HostConstSharedPtr host_;
   Network::ClientConnectionPtr connection_;
-  EncoderPtr encoder_;
   Buffer::OwnedImpl encoder_buffer_;
   DecoderPtr decoder_;
   const Config& config_;

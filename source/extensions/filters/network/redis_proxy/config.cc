@@ -65,9 +65,7 @@ Network::FilterFactoryCb RedisProxyFilterConfigFactory::createFilterFactoryFromP
           proto_config.latency_in_micros());
   return [splitter, filter_config](Network::FilterManager& filter_manager) -> void {
     Common::Redis::DecoderFactoryImpl factory;
-    filter_manager.addReadFilter(std::make_shared<ProxyFilter>(
-        factory, Common::Redis::EncoderPtr{new Common::Redis::EncoderImpl()}, *splitter,
-        filter_config));
+    filter_manager.addReadFilter(std::make_shared<ProxyFilter>(factory, *splitter, filter_config));
   };
 }
 

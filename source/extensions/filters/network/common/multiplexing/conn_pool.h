@@ -33,7 +33,7 @@ public:
    *         for some reason.
    */
   virtual Common::Redis::Client::PoolRequest*
-  makeRequest(const std::string& hash_key, const Common::Redis::RespValue& request,
+  makeRequest(const std::string& hash_key, const Common::Redis::Encodable& request,
               Common::Redis::Client::PoolCallbacks& callbacks) PURE;
 
   /**
@@ -47,7 +47,7 @@ public:
    *         for some reason.
    */
   virtual Common::Redis::Client::PoolRequest*
-  makeRequestToHost(const std::string& host_address, const Common::Redis::RespValue& request,
+  makeRequestToHost(const std::string& host_address, const Common::Redis::Encodable& request,
                     Common::Redis::Client::PoolCallbacks& callbacks) PURE;
 };
 

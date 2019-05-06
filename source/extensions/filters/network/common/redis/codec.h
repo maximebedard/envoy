@@ -14,6 +14,20 @@ namespace Common {
 namespace Redis {
 
 /**
+ * A redis byte encoder for https://redis.io/topics/protocol
+ */
+class Encodable {
+public:
+  virtual ~Encodable() {}
+
+  /**
+   * Encode value to a buffer.
+   * @param out supplies the buffer to encode to.
+   */
+  virtual void encode(Buffer::Instance& out) const PURE;
+};
+
+/**
  * All RESP types as defined here: https://redis.io/topics/protocol
  */
 enum class RespType { Null, SimpleString, BulkString, Integer, Error, Array };
@@ -22,7 +36,7 @@ enum class RespType { Null, SimpleString, BulkString, Integer, Error, Array };
  * A variant implementation of a RESP value optimized for performance. A C++11 union is used for
  * the underlying type so that no unnecessary allocations/constructions are needed.
  */
-class RespValue {
+class RespValue : public Encodable {
 public:
   RespValue() : type_(RespType::Null) {}
   ~RespValue() { cleanup(); }
@@ -55,6 +69,8 @@ public:
   RespType type() const { return type_; }
   void type(RespType type);
 
+  virtual void encode(Buffer::Instance& out) const override;
+
 private:
   union {
     std::vector<RespValue> array_;
@@ -63,6 +79,13 @@ private:
   };
 
   void cleanup();
+
+  static void encodeRespValue(const RespValue& value, Buffer::Instance& out);
+  static void encodeArray(const std::vector<RespValue>& array, Buffer::Instance& out);
+  static void encodeBulkString(const std::string& string, Buffer::Instance& out);
+  static void encodeError(const std::string& string, Buffer::Instance& out);
+  static void encodeInteger(int64_t integer, Buffer::Instance& out);
+  static void encodeSimpleString(const std::string& string, Buffer::Instance& out);
 
   RespType type_;
 };
@@ -113,23 +136,6 @@ public:
    */
   virtual DecoderPtr create(DecoderCallbacks& callbacks) PURE;
 };
-
-/**
- * A redis byte encoder for https://redis.io/topics/protocol
- */
-class Encoder {
-public:
-  virtual ~Encoder() {}
-
-  /**
-   * Encode a RESP value to a buffer.
-   * @param value supplies the value to encode.
-   * @param out supplies the buffer to encode to.
-   */
-  virtual void encode(const RespValue& value, Buffer::Instance& out) PURE;
-};
-
-typedef std::unique_ptr<Encoder> EncoderPtr;
 
 /**
  * A redis protocol error.

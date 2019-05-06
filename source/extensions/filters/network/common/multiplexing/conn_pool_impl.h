@@ -43,10 +43,10 @@ public:
       const envoy::config::filter::network::redis_proxy::v2::RedisProxy::ConnPoolSettings& config);
   // RedisProxy::ConnPool::Instance
   Common::Redis::Client::PoolRequest*
-  makeRequest(const std::string& key, const Common::Redis::RespValue& request,
+  makeRequest(const std::string& key, const Common::Redis::Encodable& request,
               Common::Redis::Client::PoolCallbacks& callbacks) override;
   Common::Redis::Client::PoolRequest*
-  makeRequestToHost(const std::string& host_address, const Common::Redis::RespValue& request,
+  makeRequestToHost(const std::string& host_address, const Common::Redis::Encodable& request,
                     Common::Redis::Client::PoolCallbacks& callbacks) override;
 
 private:
@@ -72,10 +72,10 @@ private:
     ThreadLocalPool(InstanceImpl& parent, Event::Dispatcher& dispatcher, std::string cluster_name);
     ~ThreadLocalPool();
     Common::Redis::Client::PoolRequest*
-    makeRequest(const std::string& key, const Common::Redis::RespValue& request,
+    makeRequest(const std::string& key, const Common::Redis::Encodable& request,
                 Common::Redis::Client::PoolCallbacks& callbacks);
     Common::Redis::Client::PoolRequest*
-    makeRequestToHost(const std::string& host_address, const Common::Redis::RespValue& request,
+    makeRequestToHost(const std::string& host_address, const Common::Redis::Encodable& request,
                       Common::Redis::Client::PoolCallbacks& callbacks);
     void onClusterAddOrUpdateNonVirtual(Upstream::ThreadLocalCluster& cluster);
     void onHostsRemoved(const std::vector<Upstream::HostSharedPtr>& hosts_removed);

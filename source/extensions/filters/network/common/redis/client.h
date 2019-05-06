@@ -76,7 +76,7 @@ public:
    * @return PoolRequest* a handle to the active request or nullptr if the request could not be made
    *         for some reason.
    */
-  virtual PoolRequest* makeRequest(const RespValue& request, PoolCallbacks& callbacks) PURE;
+  virtual PoolRequest* makeRequest(const Encodable& request, PoolCallbacks& callbacks) PURE;
 };
 
 typedef std::unique_ptr<Client> ClientPtr;

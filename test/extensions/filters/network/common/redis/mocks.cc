@@ -20,15 +20,15 @@ void PrintTo(const RespValue& value, std::ostream* os) { *os << value.toString()
 
 void PrintTo(const RespValuePtr& value, std::ostream* os) { *os << value->toString(); }
 
-MockEncoder::MockEncoder() {
-  ON_CALL(*this, encode(_, _))
-      .WillByDefault(
-          Invoke([this](const Common::Redis::RespValue& value, Buffer::Instance& out) -> void {
-            real_encoder_.encode(value, out);
-          }));
-}
+// MockEncoder::MockEncoder() {
+//   ON_CALL(*this, encode(_, _))
+//       .WillByDefault(
+//           Invoke([this](const Common::Redis::RespValue& value, Buffer::Instance& out) -> void {
+//             real_encoder_.encode(value, out);
+//           }));
+// }
 
-MockEncoder::~MockEncoder() {}
+// MockEncoder::~MockEncoder() {}
 
 MockDecoder::MockDecoder() {}
 MockDecoder::~MockDecoder() {}

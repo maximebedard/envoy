@@ -76,22 +76,6 @@ public:
   }
 };
 
-/**
- * Encoder implementation of https://redis.io/topics/protocol
- */
-class EncoderImpl : public Encoder {
-public:
-  // RedisProxy::Encoder
-  void encode(const RespValue& value, Buffer::Instance& out) override;
-
-private:
-  void encodeArray(const std::vector<RespValue>& array, Buffer::Instance& out);
-  void encodeBulkString(const std::string& string, Buffer::Instance& out);
-  void encodeError(const std::string& string, Buffer::Instance& out);
-  void encodeInteger(int64_t integer, Buffer::Instance& out);
-  void encodeSimpleString(const std::string& string, Buffer::Instance& out);
-};
-
 } // namespace Redis
 } // namespace Common
 } // namespace NetworkFilters

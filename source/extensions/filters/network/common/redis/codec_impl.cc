@@ -248,9 +248,7 @@ void DecoderImpl::parseSlice(const Buffer::RawSlice& slice) {
         pending_value_stack_.front().value_->type(RespType::Integer);
         break;
       }
-      default: {
-        throw ProtocolError("invalid value type");
-      }
+      default: { throw ProtocolError("invalid value type"); }
       }
 
       remaining--;
@@ -416,7 +414,9 @@ void DecoderImpl::parseSlice(const Buffer::RawSlice& slice) {
   }
 }
 
-void EncoderImpl::encode(const RespValue& value, Buffer::Instance& out) {
+void RespValue::encode(Buffer::Instance& out) const { encodeRespValue(*this, out); }
+
+void RespValue::encodeRespValue(const RespValue& value, Buffer::Instance& out) {
   switch (value.type()) {
   case RespType::Array: {
     encodeArray(value.asArray(), out);
@@ -444,7 +444,7 @@ void EncoderImpl::encode(const RespValue& value, Buffer::Instance& out) {
   }
 }
 
-void EncoderImpl::encodeArray(const std::vector<RespValue>& array, Buffer::Instance& out) {
+void RespValue::encodeArray(const std::vector<RespValue>& array, Buffer::Instance& out) {
   char buffer[32];
   char* current = buffer;
   *current++ = '*';
@@ -454,11 +454,11 @@ void EncoderImpl::encodeArray(const std::vector<RespValue>& array, Buffer::Insta
   out.add(buffer, current - buffer);
 
   for (const RespValue& value : array) {
-    encode(value, out);
+    encodeRespValue(value, out);
   }
 }
 
-void EncoderImpl::encodeBulkString(const std::string& string, Buffer::Instance& out) {
+void RespValue::encodeBulkString(const std::string& string, Buffer::Instance& out) {
   char buffer[32];
   char* current = buffer;
   *current++ = '$';
@@ -470,13 +470,13 @@ void EncoderImpl::encodeBulkString(const std::string& string, Buffer::Instance& 
   out.add("\r\n", 2);
 }
 
-void EncoderImpl::encodeError(const std::string& string, Buffer::Instance& out) {
+void RespValue::encodeError(const std::string& string, Buffer::Instance& out) {
   out.add("-", 1);
   out.add(string);
   out.add("\r\n", 2);
 }
 
-void EncoderImpl::encodeInteger(int64_t integer, Buffer::Instance& out) {
+void RespValue::encodeInteger(int64_t integer, Buffer::Instance& out) {
   char buffer[32];
   char* current = buffer;
   *current++ = ':';
@@ -495,7 +495,7 @@ void EncoderImpl::encodeInteger(int64_t integer, Buffer::Instance& out) {
   out.add(buffer, current - buffer);
 }
 
-void EncoderImpl::encodeSimpleString(const std::string& string, Buffer::Instance& out) {
+void RespValue::encodeSimpleString(const std::string& string, Buffer::Instance& out) {
   out.add("+", 1);
   out.add(string);
   out.add("\r\n", 2);

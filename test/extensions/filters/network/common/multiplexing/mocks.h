@@ -36,11 +36,11 @@ public:
 
   MOCK_METHOD3(makeRequest,
                Common::Redis::Client::PoolRequest*(
-                   const std::string& hash_key, const Common::Redis::RespValue& request,
+                   const std::string& hash_key, const Common::Redis::Encodable& request,
                    Common::Redis::Client::PoolCallbacks& callbacks));
   MOCK_METHOD3(makeRequestToHost,
                Common::Redis::Client::PoolRequest*(
-                   const std::string& host_address, const Common::Redis::RespValue& request,
+                   const std::string& host_address, const Common::Redis::Encodable& request,
                    Common::Redis::Client::PoolCallbacks& callbacks));
 };
 

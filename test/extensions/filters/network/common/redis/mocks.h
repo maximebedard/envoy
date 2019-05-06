@@ -24,16 +24,16 @@ namespace Redis {
 void PrintTo(const RespValue& value, std::ostream* os);
 void PrintTo(const RespValuePtr& value, std::ostream* os);
 
-class MockEncoder : public Common::Redis::Encoder {
-public:
-  MockEncoder();
-  ~MockEncoder();
+// class MockEncoder : public Common::Redis::Encoder {
+// public:
+//   MockEncoder();
+//   ~MockEncoder();
 
-  MOCK_METHOD2(encode, void(const Common::Redis::RespValue& value, Buffer::Instance& out));
+//   MOCK_METHOD2(encode, void(const Common::Redis::RespValue& value, Buffer::Instance& out));
 
-private:
-  Common::Redis::EncoderImpl real_encoder_;
-};
+// private:
+//   Common::Redis::EncoderImpl real_encoder_;
+// };
 
 class MockDecoder : public Common::Redis::Decoder {
 public:
@@ -71,7 +71,7 @@ public:
   MOCK_METHOD1(addConnectionCallbacks, void(Network::ConnectionCallbacks& callbacks));
   MOCK_METHOD0(close, void());
   MOCK_METHOD2(makeRequest,
-               PoolRequest*(const Common::Redis::RespValue& request, PoolCallbacks& callbacks));
+               PoolRequest*(const Common::Redis::Encodable& request, PoolCallbacks& callbacks));
 
   std::list<Network::ConnectionCallbacks*> callbacks_;
 };

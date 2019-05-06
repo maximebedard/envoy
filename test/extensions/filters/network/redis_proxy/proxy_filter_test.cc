@@ -88,8 +88,7 @@ public:
     envoy::config::filter::network::redis_proxy::v2::RedisProxy proto_config =
         parseProtoFromJson(json_string);
     config_.reset(new ProxyFilterConfig(proto_config, store_, drain_decision_, runtime_));
-    filter_ = std::make_unique<ProxyFilter>(*this, Common::Redis::EncoderPtr{encoder_}, splitter_,
-                                            config_);
+    filter_ = std::make_unique<ProxyFilter>(*this, splitter_, config_);
     filter_->initializeReadFilterCallbacks(filter_callbacks_);
     EXPECT_EQ(Network::FilterStatus::Continue, filter_->onNewConnection());
     EXPECT_EQ(1UL, config_->stats_.downstream_cx_total_.value());
@@ -113,7 +112,6 @@ public:
     return Common::Redis::DecoderPtr{decoder_};
   }
 
-  Common::Redis::MockEncoder* encoder_{new Common::Redis::MockEncoder()};
   Common::Redis::MockDecoder* decoder_{new Common::Redis::MockDecoder()};
   Common::Redis::DecoderCallbacks* decoder_callbacks_{};
   CommandSplitter::MockInstance splitter_;
@@ -150,12 +148,12 @@ TEST_F(RedisProxyFilterTest, OutOfOrderResponseWithDrainClose) {
   EXPECT_EQ(2UL, config_->stats_.downstream_rq_active_.value());
 
   Common::Redis::RespValuePtr response2(new Common::Redis::RespValue());
-  Common::Redis::RespValue* response2_ptr = response2.get();
+  // Common::Redis::RespValue* response2_ptr = response2.get();
   request_callbacks2->onResponse(std::move(response2));
 
   Common::Redis::RespValuePtr response1(new Common::Redis::RespValue());
-  EXPECT_CALL(*encoder_, encode(Ref(*response1), _));
-  EXPECT_CALL(*encoder_, encode(Ref(*response2_ptr), _));
+  // EXPECT_CALL(*encoder_, encode(Ref(*response1), _));
+  // EXPECT_CALL(*encoder_, encode(Ref(*response2_ptr), _));
   EXPECT_CALL(filter_callbacks_.connection_, write(_, _));
   EXPECT_CALL(drain_decision_, drainClose()).WillOnce(Return(true));
   EXPECT_CALL(runtime_.snapshot_, featureEnabled("redis.drain_close_enabled", 100))
@@ -230,7 +228,7 @@ TEST_F(RedisProxyFilterTest, ImmediateResponse) {
             Common::Redis::RespValuePtr error(new Common::Redis::RespValue());
             error->type(Common::Redis::RespType::Error);
             error->asString() = "no healthy upstream";
-            EXPECT_CALL(*encoder_, encode(Eq(ByRef(*error)), _));
+            // EXPECT_CALL(*encoder_, encode(Eq(ByRef(*error)), _));
             EXPECT_CALL(filter_callbacks_.connection_, write(_, _));
             callbacks.onResponse(std::move(error));
             return nullptr;
@@ -251,7 +249,7 @@ TEST_F(RedisProxyFilterTest, ProtocolError) {
   Common::Redis::RespValue error;
   error.type(Common::Redis::RespType::Error);
   error.asString() = "downstream protocol error";
-  EXPECT_CALL(*encoder_, encode(Eq(ByRef(error)), _));
+  // EXPECT_CALL(*encoder_, encode(Eq(ByRef(error)), _));
   EXPECT_CALL(filter_callbacks_.connection_, write(_, _));
   EXPECT_CALL(filter_callbacks_.connection_, close(Network::ConnectionCloseType::NoFlush));
   EXPECT_EQ(Network::FilterStatus::StopIteration, filter_->onData(fake_data, false));

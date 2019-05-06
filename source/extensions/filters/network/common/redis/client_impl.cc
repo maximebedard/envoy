@@ -21,11 +21,9 @@ ConfigImpl::ConfigImpl(
 {}
 
 ClientPtr ClientImpl::create(Upstream::HostConstSharedPtr host, Event::Dispatcher& dispatcher,
-                             EncoderPtr&& encoder, DecoderFactory& decoder_factory,
-                             const Config& config) {
+                             DecoderFactory& decoder_factory, const Config& config) {
 
-  std::unique_ptr<ClientImpl> client(
-      new ClientImpl(host, dispatcher, std::move(encoder), decoder_factory, config));
+  std::unique_ptr<ClientImpl> client(new ClientImpl(host, dispatcher, decoder_factory, config));
   client->connection_ = host->createConnection(dispatcher, nullptr, nullptr).connection_;
   client->connection_->addConnectionCallbacks(*client);
   client->connection_->addReadFilter(Network::ReadFilterSharedPtr{new UpstreamReadFilter(*client)});
@@ -35,9 +33,8 @@ ClientPtr ClientImpl::create(Upstream::HostConstSharedPtr host, Event::Dispatche
 }
 
 ClientImpl::ClientImpl(Upstream::HostConstSharedPtr host, Event::Dispatcher& dispatcher,
-                       EncoderPtr&& encoder, DecoderFactory& decoder_factory, const Config& config)
-    : host_(host), encoder_(std::move(encoder)), decoder_(decoder_factory.create(*this)),
-      config_(config),
+                       DecoderFactory& decoder_factory, const Config& config)
+    : host_(host), decoder_(decoder_factory.create(*this)), config_(config),
       connect_or_op_timer_(dispatcher.createTimer([this]() -> void { onConnectOrOpTimeout(); })),
       flush_timer_(dispatcher.createTimer([this]() -> void { flushBufferAndResetTimer(); })) {
   host->cluster().stats().upstream_cx_total_.inc();
@@ -63,13 +60,14 @@ void ClientImpl::flushBufferAndResetTimer() {
   connection_->write(encoder_buffer_, false);
 }
 
-PoolRequest* ClientImpl::makeRequest(const RespValue& request, PoolCallbacks& callbacks) {
+PoolRequest* ClientImpl::makeRequest(const Common::Redis::Encodable& request,
+                                     PoolCallbacks& callbacks) {
   ASSERT(connection_->state() == Network::Connection::State::Open);
 
   const bool empty_buffer = encoder_buffer_.length() == 0;
 
   pending_requests_.emplace_back(*this, callbacks);
-  encoder_->encode(request, encoder_buffer_);
+  request.encode(encoder_buffer_);
 
   // If buffer is full, flush. If the the buffer was empty before the request, start the timer.
   if (encoder_buffer_.length() >= config_.maxBufferSizeBeforeFlush()) {
@@ -222,8 +220,7 @@ ClientFactoryImpl ClientFactoryImpl::instance_;
 
 ClientPtr ClientFactoryImpl::create(Upstream::HostConstSharedPtr host,
                                     Event::Dispatcher& dispatcher, const Config& config) {
-  return ClientImpl::create(host, dispatcher, EncoderPtr{new EncoderImpl()}, decoder_factory_,
-                            config);
+  return ClientImpl::create(host, dispatcher, decoder_factory_, config);
 }
 
 } // namespace Client

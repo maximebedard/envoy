@@ -27,10 +27,8 @@ ProxyStats ProxyFilterConfig::generateStats(const std::string& prefix, Stats::Sc
 }
 
 ProxyFilter::ProxyFilter(Common::Redis::DecoderFactory& factory,
-                         Common::Redis::EncoderPtr&& encoder, CommandSplitter::Instance& splitter,
-                         ProxyFilterConfigSharedPtr config)
-    : decoder_(factory.create(*this)), encoder_(std::move(encoder)), splitter_(splitter),
-      config_(config) {
+                         CommandSplitter::Instance& splitter, ProxyFilterConfigSharedPtr config)
+    : decoder_(factory.create(*this)), splitter_(splitter), config_(config) {
   config_->stats_.downstream_cx_total_.inc();
   config_->stats_.downstream_cx_active_.inc();
 }
@@ -81,7 +79,7 @@ void ProxyFilter::onResponse(PendingRequest& request, Common::Redis::RespValuePt
   // The response we got might not be in order, so flush out what we can. (A new response may
   // unlock several out of order responses).
   while (!pending_requests_.empty() && pending_requests_.front().pending_response_) {
-    encoder_->encode(*pending_requests_.front().pending_response_, encoder_buffer_);
+    pending_requests_.front().pending_response_->encode(encoder_buffer_);
     pending_requests_.pop_front();
   }
 
@@ -106,7 +104,7 @@ Network::FilterStatus ProxyFilter::onData(Buffer::Instance& data, bool) {
     Common::Redis::RespValue error;
     error.type(Common::Redis::RespType::Error);
     error.asString() = "downstream protocol error";
-    encoder_->encode(error, encoder_buffer_);
+    error.encode(encoder_buffer_);
     callbacks_->connection().write(encoder_buffer_, false);
     callbacks_->connection().close(Network::ConnectionCloseType::NoFlush);
     return Network::FilterStatus::StopIteration;
