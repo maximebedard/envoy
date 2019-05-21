@@ -12,53 +12,41 @@ namespace Extensions {
 namespace NetworkFilters {
 namespace MemcachedProxy {
 
+class Message {
+public:
+  virtual ~Message();
 
-enum class OpCode {
-  OP_GET = 0x00,
-  OP_GETQ = 0x09,
-  OP_GETK = 0x0c,
-  OP_GETKQ = 0x0d,
-  OP_DELETE = 0x04,
-  OP_DELETEQ = 0x14,
-  OP_SET = 0x01,
-  OP_SETQ = 0x11,
-  OP_ADD = 0x02,
-  OP_ADDQ = 0x12,
-  OP_REPLACE = 0x03,
-  OP_REPLACEQ = 0x13,
-  OP_INCREMENT = 0x05,
-  OP_INCREMENTQ = 0x15,
-  OP_DECREMENT = 0x06,
-  OP_DECREMENTQ = 0x16,
-  OP_APPEND = 0x0e,
-  OP_APPENDQ = 0x19,
-  OP_PREPEND = 0x0f,
-  OP_PREPENDQ = 0x1a,
-  OP_VERSION = 0x0b,
+  enum class OpCode {
+    OP_GET = 0x00,
+    OP_GETQ = 0x09,
+    OP_GETK = 0x0c,
+    OP_GETKQ = 0x0d,
+    OP_DELETE = 0x04,
+    OP_DELETEQ = 0x14,
+    OP_SET = 0x01,
+    OP_SETQ = 0x11,
+    OP_ADD = 0x02,
+    OP_ADDQ = 0x12,
+    OP_REPLACE = 0x03,
+    OP_REPLACEQ = 0x13,
+    OP_INCREMENT = 0x05,
+    OP_INCREMENTQ = 0x15,
+    OP_DECREMENT = 0x06,
+    OP_DECREMENTQ = 0x16,
+    OP_APPEND = 0x0e,
+    OP_APPENDQ = 0x19,
+    OP_PREPEND = 0x0f,
+    OP_PREPENDQ = 0x1a,
+    OP_VERSION = 0x0b,
+  };
+
+  enum class Type {
+    V1_REQUEST = 0x80,
+    V1_RESPONSE = 0x81,
+  };
+
+  constexpr static uint8_t HeaderLength = 24;
 };
-
-enum class Type {
-  V1_REQUEST = 0x80,
-  V1_RESPONSE = 0x81,
-};
-
-/*
- * Base class for all memcached messages
- */
-// class Message {
-// public:
-//   virtual ~Message() = default;
-
-//   constexpr static uint8_t HeaderLength = 24;
-
-//   // virtual uint8_t dataType() const PURE;
-//   // virtual uint8_t vbucketIdOrStatus() const PURE;
-//   // virtual uint32_t opaque() const PURE;
-//   // virtual uint64_t cas() const PURE;
-
-//   // TODO: double dispatch encoding. Will enable support for binary encoder + ascii encoder.
-//   // void encode(Encoder& encoder, Buffer::Instance& out);
-// };
 
 class Command {
 public:
@@ -66,7 +54,7 @@ public:
 
   virtual bool quiet() const PURE;
   // virtual void setQuiet(bool quiet);
-  virtual const std::string key() const PURE;
+  virtual const std::string& key() const PURE;
 };
 
 /**

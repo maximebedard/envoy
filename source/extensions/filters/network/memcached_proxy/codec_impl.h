@@ -87,7 +87,7 @@ public:
 };
 
 class SetLikeRequestImpl : public MessageImpl,
-                           public Command,
+                           public virtual Command,
                            public virtual SetLikeRequest {
 public:
   using MessageImpl::MessageImpl;
@@ -185,6 +185,7 @@ public:
 private:
   bool decode(Buffer::Instance& data);
 
+  // TODO: most likely a way to be smarter about this.
   template<class Message>
   static std::unique_ptr<Message> decodeGetLike(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque,
     uint64_t cas, uint16_t key_length, uint8_t extras_length, uint32_t body_length, Buffer::Instance& data);
@@ -261,7 +262,7 @@ public:
 };
 
 class NoopRequestImpl : public MessageImpl,
-                           public virtual NoopRequest {
+                        public virtual NoopRequest {
 public:
   using MessageImpl::MessageImpl;
 
@@ -296,16 +297,16 @@ public:
   void encodeVersion(const VersionRequest& request, Buffer::Instance& out) override;
   void encodeNoop(const NoopRequest& request, Buffer::Instance& out) override;
 private:
-  void encodeGetLike(const GetLikeRequest& request, OpCode op_code, Buffer::Instance& out);
-  void encodeSetLike(const SetLikeRequest& request, OpCode op_code, Buffer::Instance& out);
-  void encodeCounterLike(const CounterLikeRequest& request, OpCode op_code, Buffer::Instance& out);
-  void encodeAppendLike(const AppendLikeRequest& request, OpCode op_code, Buffer::Instance& out);
+  void encodeGetLike(const GetLikeRequest& request, Message::OpCode op_code, Buffer::Instance& out);
+  void encodeSetLike(const SetLikeRequest& request, Message::OpCode op_code, Buffer::Instance& out);
+  void encodeCounterLike(const CounterLikeRequest& request, Message::OpCode op_code, Buffer::Instance& out);
+  void encodeAppendLike(const AppendLikeRequest& request, Message::OpCode op_code, Buffer::Instance& out);
   void encodeRequestHeader(
     uint16_t key_length,
     uint8_t extras_length,
     uint32_t body_length,
     const MessageImpl& request,
-    OpCode op,
+    Message::OpCode op,
     Buffer::Instance& out);
 };
 
