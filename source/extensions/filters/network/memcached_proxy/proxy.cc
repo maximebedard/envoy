@@ -23,6 +23,7 @@ namespace MemcachedProxy {
 
 ProxyFilter::ProxyFilter(
   const std::string& stat_prefix,
+  ConnPool::Instance& conn_pool,
   Stats::Scope& scope,
   // Runtime::Loader& runtime,
   // const Network::DrainDecision& drain_decision,
@@ -31,13 +32,14 @@ ProxyFilter::ProxyFilter(
   DecoderFactory& factory,
   EncoderPtr&& encoder)
     : stat_prefix_(stat_prefix),
-    // scope_(scope),
-    stats_(generateStats(stat_prefix, scope)),
+      // scope_(scope),
+      stats_(generateStats(stat_prefix, scope)),
+      conn_pool_(conn_pool),
       // runtime_(runtime),
       // drain_decision_(drain_decision),
       // generator_(generator),
-       // time_source_(time_source),
-       decoder_(factory.create(*this)), encoder_(std::move(encoder)) {}
+      // time_source_(time_source),
+      decoder_(factory.create(*this)), encoder_(std::move(encoder)) {}
 
 void ProxyFilter::decodeGet(GetRequestPtr&& request) {
   stats_.op_get_.inc();
@@ -111,6 +113,7 @@ void ProxyFilter::onEvent(Network::ConnectionEvent event) {
   //   stats_.cx_destroy_remote_with_active_rq_.inc();
   // }
 }
+
 Network::FilterStatus ProxyFilter::onData(Buffer::Instance& data, bool) {
   ENVOY_LOG(info, "downstream -> upstream => bytes={}", data.length());
   read_buffer_.add(data);

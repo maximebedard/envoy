@@ -15,6 +15,15 @@ envoy_cc_library(
 )
 
 envoy_cc_library(
+    name = "conn_pool_interface",
+    hdrs = ["conn_pool.h"],
+    deps = [
+        ":codec_interface",
+        "//include/envoy/upstream:cluster_manager_interface",
+    ],
+)
+
+envoy_cc_library(
     name = "codec_lib",
     srcs = ["codec_impl.cc"],
     hdrs = ["codec_impl.h"],
@@ -29,11 +38,30 @@ envoy_cc_library(
 )
 
 envoy_cc_library(
+    name = "conn_pool_lib",
+    srcs = ["conn_pool_impl.cc"],
+    hdrs = ["conn_pool_impl.h"],
+    deps = [
+        ":conn_pool_interface",
+        ":codec_lib",
+        "//include/envoy/thread_local:thread_local_interface",
+        "//include/envoy/upstream:cluster_manager_interface",
+        "//source/common/buffer:buffer_lib",
+        "//source/common/common:assert_lib",
+        "//source/common/network:filter_lib",
+        "//source/common/protobuf:utility_lib",
+        "//source/common/upstream:load_balancer_lib",
+        "@envoy_api//envoy/config/filter/network/memcached_proxy/v2:memcached_proxy_cc",
+    ],
+)
+
+envoy_cc_library(
     name = "proxy_lib",
     srcs = ["proxy.cc"],
     hdrs = ["proxy.h"],
     deps = [
         ":codec_interface",
+        ":conn_pool_interface",
         ":codec_lib",
         "//include/envoy/access_log:access_log_interface",
         "//include/envoy/common:time_interface",

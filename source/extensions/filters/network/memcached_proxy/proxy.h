@@ -24,6 +24,7 @@
 #include "common/singleton/const_singleton.h"
 
 #include "extensions/filters/network/memcached_proxy/codec.h"
+#include "extensions/filters/network/memcached_proxy/conn_pool.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -68,6 +69,7 @@ class ProxyFilter : public Network::Filter,
                     Logger::Loggable<Logger::Id::memcached> {
 public:
   ProxyFilter(const std::string& stat_prefix, Stats::Scope& scope,
+            ConnPool::Instance& conn_pool,
             // Runtime::Loader& runtime,
              // const Network::DrainDecision& drain_decision, Runtime::RandomGenerator& generator,
               // TimeSource& time_source,
@@ -120,6 +122,7 @@ private:
   Network::ReadFilterCallbacks* read_callbacks_{};
   Event::TimerPtr drain_close_timer_;
   // TimeSource& time_source_;
+  ConnPool::Instance& conn_pool_;
   DecoderPtr decoder_;
   EncoderPtr encoder_;
 };

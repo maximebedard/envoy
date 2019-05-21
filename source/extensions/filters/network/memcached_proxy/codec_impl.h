@@ -26,19 +26,17 @@ public:
   static std::string drainString(Buffer::Instance& buffer, uint32_t size);
 };
 
-class RequestImpl : public virtual Request {
+class MessageImpl {
 public:
-  RequestImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) :
+  MessageImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) :
     data_type_(data_type), vbucket_id_or_status_(vbucket_id_or_status), opaque_(opaque), cas_(cas) {}
 
-  virtual void fromBuffer(uint16_t key_length, uint8_t extras_length, uint32_t body_length, Buffer::Instance& data) PURE;
-
-  uint8_t dataType() const override { return data_type_; }
-  uint8_t vbucketIdOrStatus() const override { return vbucket_id_or_status_; }
-  uint32_t opaque() const override { return opaque_; }
-  uint64_t cas() const override { return cas_; }
+  uint8_t dataType() const { return data_type_; }
+  uint8_t vbucketIdOrStatus() const { return vbucket_id_or_status_; }
+  uint32_t opaque() const { return opaque_; }
+  uint64_t cas() const { return cas_; }
 protected:
-  bool equals(const Request& rhs) const;
+  bool equals(const MessageImpl& rhs) const;
 private:
   const uint8_t data_type_;
   const uint8_t vbucket_id_or_status_;
@@ -46,30 +44,25 @@ private:
   const uint64_t cas_;
 };
 
-class GetLikeRequestImpl : public RequestImpl,
+class GetLikeRequestImpl : public MessageImpl,
+                           public virtual Command,
                            public virtual GetLikeRequest {
 public:
-  GetLikeRequestImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) : RequestImpl(data_type, vbucket_id_or_status, opaque, cas) {}
 
-  // RequestImpl
-  void fromBuffer(uint16_t key_length, uint8_t extras_length, uint32_t body_length, Buffer::Instance& data) override;
-
-  // GetLikeRequest
+  // Command
   bool quiet() const override { return false; }
   const std::string& key() const override { return key_; }
-
-  void key(const std::string& key) { key_ = key; }
 protected:
   bool equals(const GetLikeRequest& rhs) const;
 private:
   std::string key_;
+  bool quiet_;
 };
 
 class GetRequestImpl : public GetLikeRequestImpl,
                        public GetRequest {
 public:
-  GetRequestImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) :
-    GetLikeRequestImpl(data_type, vbucket_id_or_status, opaque, cas) {}
+  using GetLikeRequestImpl::GetLikeRequestImpl;
 
   // GetRequest
   bool operator==(const GetRequest& rhs) const override { return equals(rhs); }
@@ -78,8 +71,7 @@ public:
 class GetkRequestImpl : public GetLikeRequestImpl,
                         public GetkRequest {
 public:
-  GetkRequestImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) :
-    GetLikeRequestImpl(data_type, vbucket_id_or_status, opaque, cas) {}
+  using GetLikeRequestImpl::GetLikeRequestImpl;
 
   // GetkRequest
   bool operator==(const GetkRequest& rhs) const override { return equals(rhs); }
@@ -88,32 +80,26 @@ public:
 class DeleteRequestImpl : public GetLikeRequestImpl,
                           public DeleteRequest {
 public:
-  DeleteRequestImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) :
-    GetLikeRequestImpl(data_type, vbucket_id_or_status, opaque, cas) {}
+  using GetLikeRequestImpl::GetLikeRequestImpl;
 
   // DeleteRequest
   bool operator==(const DeleteRequest& rhs) const override { return equals(rhs); }
 };
 
-class SetLikeRequestImpl : public RequestImpl,
+class SetLikeRequestImpl : public MessageImpl,
+                           public Command,
                            public virtual SetLikeRequest {
 public:
-  SetLikeRequestImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) : RequestImpl(data_type, vbucket_id_or_status, opaque, cas) {}
+  using MessageImpl::MessageImpl;
 
-  // RequestImpl
-  void fromBuffer(uint16_t key_length, uint8_t extras_length, uint32_t body_length, Buffer::Instance& data) override;
-
-  // SetLikeRequest
+  // Command
   bool quiet() const override { return false; }
   const std::string& key() const override { return key_; }
+
+  // SetLikeRequest
   const std::string& body() const override { return body_; }
   uint32_t flags() const override { return flags_; }
   uint32_t expiration() const override { return expiration_; }
-
-  void key(const std::string& key) { key_ = key; }
-  void body(const std::string& body) { body_ = body; }
-  void flags(uint32_t flags) { flags_ = flags; }
-  void expiration(uint32_t expiration) { expiration_ = expiration; }
 protected:
   bool equals(const SetLikeRequest& rhs) const;
 private:
@@ -126,8 +112,7 @@ private:
 class SetRequestImpl : public SetLikeRequestImpl,
                        public SetRequest {
 public:
-  SetRequestImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) :
-    SetLikeRequestImpl(data_type, vbucket_id_or_status, opaque, cas) {}
+  using SetLikeRequestImpl::SetLikeRequestImpl;
 
   // SetRequest
   bool operator==(const SetRequest& rhs) const override { return equals(rhs); }
@@ -136,42 +121,34 @@ public:
 class AddRequestImpl : public SetLikeRequestImpl,
                        public AddRequest {
 public:
-  AddRequestImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) :
-    SetLikeRequestImpl(data_type, vbucket_id_or_status, opaque, cas) {}
+  using SetLikeRequestImpl::SetLikeRequestImpl;
 
   // AddRequest
   bool operator==(const AddRequest& rhs) const override { return equals(rhs); }
 };
 
 class ReplaceRequestImpl : public SetLikeRequestImpl,
-                       public ReplaceRequest {
+                           public ReplaceRequest {
 public:
-  ReplaceRequestImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) :
-    SetLikeRequestImpl(data_type, vbucket_id_or_status, opaque, cas) {}
+  using SetLikeRequestImpl::SetLikeRequestImpl;
 
   // ReplaceRequest
   bool operator==(const ReplaceRequest& rhs) const override { return equals(rhs); }
 };
 
-class CounterLikeRequestImpl : public RequestImpl,
+class CounterLikeRequestImpl : public MessageImpl,
                                public virtual CounterLikeRequest {
 public:
-  CounterLikeRequestImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) : RequestImpl(data_type, vbucket_id_or_status, opaque, cas) {}
+  using MessageImpl::MessageImpl;
 
-  // RequestImpl
-  void fromBuffer(uint16_t key_length, uint8_t extras_length, uint32_t body_length, Buffer::Instance& data) override;
-
-  // CounterLikeRequest
+  // Command
   bool quiet() const override { return false; }
   const std::string& key() const override { return key_; }
+
+  // CounterLikeRequest
   uint64_t amount() const override { return amount_; }
   uint64_t initialValue() const override { return initial_value_; }
   uint32_t expiration() const override { return expiration_; }
-
-  void key(const std::string& key) { key_ = key; }
-  void amount(uint64_t amount) { amount_ = amount; }
-  void initialValue(uint64_t initial_value) { initial_value_ = initial_value; }
-  void expiration(uint32_t expiration) { expiration_ = expiration; }
 protected:
   bool equals(const CounterLikeRequest& rhs) const;
 private:
@@ -184,8 +161,7 @@ private:
 class IncrementRequestImpl : public CounterLikeRequestImpl,
                              public IncrementRequest {
 public:
-  IncrementRequestImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) :
-    CounterLikeRequestImpl(data_type, vbucket_id_or_status, opaque, cas) {}
+  using CounterLikeRequestImpl::CounterLikeRequestImpl;
 
   // IncrementRequest
   bool operator==(const IncrementRequest& rhs) const override { return equals(rhs); }
@@ -194,8 +170,7 @@ public:
 class DecrementRequestImpl : public CounterLikeRequestImpl,
                              public DecrementRequest {
 public:
-  DecrementRequestImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) :
-    CounterLikeRequestImpl(data_type, vbucket_id_or_status, opaque, cas) {}
+  using CounterLikeRequestImpl::CounterLikeRequestImpl;
 
   // DecrementRequest
   bool operator==(const DecrementRequest& rhs) const override { return equals(rhs); }
@@ -207,11 +182,24 @@ public:
 
   // Memcached::Decoder
   void onData(Buffer::Instance& data) override;
-
 private:
   bool decode(Buffer::Instance& data);
-  bool decodeRequest(Buffer::Instance& data);
-  bool decodeResponse(Buffer::Instance& data);
+
+  template<class Message>
+  static std::unique_ptr<Message> decodeGetLike(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque,
+    uint64_t cas, uint16_t key_length, uint8_t extras_length, uint32_t body_length, Buffer::Instance& data);
+
+  template<class Message>
+  static std::unique_ptr<Message> decodeSetLike(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque,
+    uint64_t cas, uint16_t key_length, uint8_t extras_length, uint32_t body_length, Buffer::Instance& data);
+
+  template<class Message>
+  static std::unique_ptr<Message> decodeCounterLike(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque,
+    uint64_t cas, uint16_t key_length, uint8_t extras_length, uint32_t body_length, Buffer::Instance& data);
+
+  template<class Message>
+  static std::unique_ptr<Message> decodeAppendLike(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque,
+    uint64_t cas, uint16_t key_length, uint8_t extras_length, uint32_t body_length, Buffer::Instance& data);
 
   DecoderCallbacks& callbacks_;
 };
@@ -224,19 +212,18 @@ public:
   }
 };
 
-class AppendLikeRequestImpl : public RequestImpl,
+class AppendLikeRequestImpl : public MessageImpl,
+                              public Command,
                               public virtual AppendLikeRequest {
 public:
-  AppendLikeRequestImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) : RequestImpl(data_type, vbucket_id_or_status, opaque, cas) {}
+  using MessageImpl::MessageImpl;
 
-  // RequestImpl
-  void fromBuffer(uint16_t key_length, uint8_t extras_length, uint32_t body_length, Buffer::Instance& data) override;
-
-  // AppendLikeRequest
+  // Command
   bool quiet() const override { return false; }
   const std::string& key() const override { return key_; }
-  const std::string& body() const override { return body_; }
 
+  // AppendLikeRequest
+  const std::string& body() const override { return body_; }
   void key(const std::string& key) { key_ = key; }
   void body(const std::string& body) { body_ = body; }
 protected:
@@ -249,8 +236,7 @@ private:
 class AppendRequestImpl : public AppendLikeRequestImpl,
                           public AppendRequest {
 public:
-  AppendRequestImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) :
-    AppendLikeRequestImpl(data_type, vbucket_id_or_status, opaque, cas) {}
+  using AppendLikeRequestImpl::AppendLikeRequestImpl;
 
   // AppendRequest
   bool operator==(const AppendRequest& rhs) const override { return equals(rhs); }
@@ -259,24 +245,37 @@ public:
 class PrependRequestImpl : public AppendLikeRequestImpl,
                            public PrependRequest {
 public:
-  PrependRequestImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) :
-    AppendLikeRequestImpl(data_type, vbucket_id_or_status, opaque, cas) {}
+  using AppendLikeRequestImpl::AppendLikeRequestImpl;
 
   // PrependRequest
   bool operator==(const PrependRequest& rhs) const override { return equals(rhs); }
 };
 
-class VersionRequestImpl : public RequestImpl,
+class VersionRequestImpl : public MessageImpl,
                            public virtual VersionRequest {
 public:
-  VersionRequestImpl(uint8_t data_type, uint8_t vbucket_id_or_status, uint32_t opaque, uint64_t cas) :
-  RequestImpl(data_type, vbucket_id_or_status, opaque, cas) {}
-
-  // RequestImpl
-  void fromBuffer(uint16_t, uint8_t, uint32_t, Buffer::Instance&) override {}
+  using MessageImpl::MessageImpl;
 
   // VersionRequest
-  bool operator==(const VersionRequest& rhs) const override { return RequestImpl::equals(rhs); }
+  bool operator==(const VersionRequest& rhs) const override { return MessageImpl::equals(rhs); }
+};
+
+class NoopRequestImpl : public MessageImpl,
+                           public virtual NoopRequest {
+public:
+  using MessageImpl::MessageImpl;
+
+  // NoopRequest
+  bool operator==(const NoopRequest& rhs) const override { return MessageImpl::equals(rhs); }
+};
+
+class ReplyImpl : public MessageImpl,
+                  public virtual Reply {
+public:
+  using MessageImpl::MessageImpl;
+
+  // VersionRequestImpl
+  bool operator==(const Reply& rhs) const override { return MessageImpl::equals(rhs); }
 };
 
 class EncoderImpl : public Encoder, Logger::Loggable<Logger::Id::memcached> {
@@ -295,17 +294,18 @@ public:
   void encodeAppend(const AppendRequest& request, Buffer::Instance& out) override;
   void encodePrepend(const PrependRequest& request, Buffer::Instance& out) override;
   void encodeVersion(const VersionRequest& request, Buffer::Instance& out) override;
+  void encodeNoop(const NoopRequest& request, Buffer::Instance& out) override;
 private:
-  void encodeGetLike(const GetLikeRequest& request, Message::OpCode op_code, Buffer::Instance& out);
-  void encodeSetLike(const SetLikeRequest& request, Message::OpCode op_code, Buffer::Instance& out);
-  void encodeCounterLike(const CounterLikeRequest& request, Message::OpCode op_code, Buffer::Instance& out);
-  void encodeAppendLike(const AppendLikeRequest& request, Message::OpCode op_code, Buffer::Instance& out);
+  void encodeGetLike(const GetLikeRequest& request, OpCode op_code, Buffer::Instance& out);
+  void encodeSetLike(const SetLikeRequest& request, OpCode op_code, Buffer::Instance& out);
+  void encodeCounterLike(const CounterLikeRequest& request, OpCode op_code, Buffer::Instance& out);
+  void encodeAppendLike(const AppendLikeRequest& request, OpCode op_code, Buffer::Instance& out);
   void encodeRequestHeader(
     uint16_t key_length,
     uint8_t extras_length,
     uint32_t body_length,
-    const Request& request,
-    Message::OpCode op,
+    const MessageImpl& request,
+    OpCode op,
     Buffer::Instance& out);
 };
 
