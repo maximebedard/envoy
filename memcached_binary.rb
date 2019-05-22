@@ -31,10 +31,10 @@ def setq(key, value, cas = 0, ttl = 0, flags = 0)
 end
 
 print(set("foo", "bar"))
-print(getq("bar"))
-10.times { print(getq("foo")); print(getq("bar")) }
+# print(getq("bar"))
+# 10.times { print(getq("foo")); print(getq("bar")) }
 
 STDOUT.flush
 
-sleep(10)
-print(get("baz"))
+# sleep(10)
+# print(get("baz"))

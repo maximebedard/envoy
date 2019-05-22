@@ -38,7 +38,7 @@ public:
    * Called when a pipelined response is received.
    * @param value supplies the response which is now owned by the callee.
    */
-  virtual void onResponse(Common::Redis::RespValuePtr&& value) PURE;
+  virtual void onResponse(MessagePtr&& value) PURE;
 
   /**
    * Called when a network/protocol error occurs and there is no response.
@@ -70,8 +70,7 @@ public:
    * @return PoolRequest* a handle to the active request or nullptr if the request could not be made
    *         for some reason.
    */
-  virtual PoolRequest* makeRequest(const Request& request,
-                                   PoolCallbacks& callbacks) PURE;
+  virtual PoolRequest* makeRequest(const Message& request, PoolCallbacks& callbacks) PURE;
 };
 
 typedef std::unique_ptr<Client> ClientPtr;
@@ -125,15 +124,13 @@ public:
 
   /**
    * Makes a redis request.
-   * @param hash_key supplies the key to use for consistent hashing.
+   * @param key supplies the key to use for consistent hashing.
    * @param request supplies the request to make.
    * @param callbacks supplies the request completion callbacks.
    * @return PoolRequest* a handle to the active request or nullptr if the request could not be made
    *         for some reason.
    */
-  virtual PoolRequest* makeRequest(const std::string& hash_key,
-                                   const Request& request,
-                                   PoolCallbacks& callbacks) PURE;
+  virtual PoolRequest* makeRequest(const std::string& key, const Message& request, PoolCallbacks& callbacks) PURE;
 };
 
 typedef std::unique_ptr<Instance> InstancePtr;

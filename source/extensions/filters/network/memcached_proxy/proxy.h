@@ -35,36 +35,28 @@ namespace MemcachedProxy {
  * All memcached proxy stats. @see stats_macros.h
  */
 // clang-format off
-#define ALL_MEMCACHED_PROXY_STATS(COUNTER, GAUGE, HISTOGRAM) \
-  COUNTER(decoding_error) \
-  COUNTER(encoding_error) \
-  COUNTER(op_get) \
-  COUNTER(op_getk) \
-  COUNTER(op_delete) \
-  COUNTER(op_set) \
-  COUNTER(op_add) \
-  COUNTER(op_replace) \
-  COUNTER(op_increment) \
-  COUNTER(op_decrement) \
-  COUNTER(op_append) \
-  COUNTER(op_prepend) \
-  COUNTER(op_version) \
-  COUNTER(cx_drain_close) \
+#define ALL_MEMCACHED_PROXY_STATS(COUNTER, GAUGE) \
+  COUNTER(downstream_cx_rx_bytes_total)                                                            \
+  GAUGE  (downstream_cx_rx_bytes_buffered)                                                         \
+  COUNTER(downstream_cx_tx_bytes_total)                                                            \
+  GAUGE  (downstream_cx_tx_bytes_buffered)                                                         \
+  COUNTER(downstream_cx_protocol_error)                                                            \
 // clang-format on
 
 /**
  * Struct definition for all memcached proxy stats. @see stats_macros.h
  */
 struct MemcachedProxyStats {
-  ALL_MEMCACHED_PROXY_STATS(GENERATE_COUNTER_STRUCT, GENERATE_GAUGE_STRUCT, GENERATE_HISTOGRAM_STRUCT)
+  ALL_MEMCACHED_PROXY_STATS(GENERATE_COUNTER_STRUCT, GENERATE_GAUGE_STRUCT)
 };
 
 /**
  * A sniffing filter for memcached traffic. The current implementation makes a copy of read/written
  * data, decodes it, and generates stats.
  */
-class ProxyFilter : public Network::Filter,
+class ProxyFilter : public Network::ReadFilter,
                     public DecoderCallbacks,
+                    public ConnPool::PoolCallbacks,
                     public Network::ConnectionCallbacks,
                     Logger::Loggable<Logger::Id::memcached> {
 public:
@@ -82,10 +74,12 @@ public:
   void initializeReadFilterCallbacks(Network::ReadFilterCallbacks& callbacks) override {
     read_callbacks_ = &callbacks;
     read_callbacks_->connection().addConnectionCallbacks(*this);
+    read_callbacks_->connection().setConnectionStats({stats_.downstream_cx_rx_bytes_total_,
+                                                      stats_.downstream_cx_rx_bytes_buffered_,
+                                                      stats_.downstream_cx_tx_bytes_total_,
+                                                      stats_.downstream_cx_tx_bytes_buffered_,
+                                                      nullptr, nullptr});
   }
-
-  // Network::WriteFilter
-  Network::FilterStatus onWrite(Buffer::Instance& data, bool end_stream) override;
 
   // Network::ConnectionCallbacks
   void onEvent(Network::ConnectionEvent event) override;
@@ -93,22 +87,15 @@ public:
   void onBelowWriteBufferLowWatermark() override {}
 
   // MemcachedProxy::DecoderCallback
-  void decodeGet(GetRequestPtr&& request) override;
-  void decodeGetk(GetkRequestPtr&& request) override;
-  void decodeDelete(DeleteRequestPtr&& request) override;
-  void decodeSet(SetRequestPtr&& request) override;
-  void decodeAdd(AddRequestPtr&& request) override;
-  void decodeReplace(ReplaceRequestPtr&& request) override;
-  void decodeIncrement(IncrementRequestPtr&& request) override;
-  void decodeDecrement(DecrementRequestPtr&& request) override;
-  void decodeAppend(AppendRequestPtr&& request) override;
-  void decodePrepend(PrependRequestPtr&& request) override;
-  void decodeVersion(VersionRequestPtr&& request) override;
+  void decodeMessage(MessagePtr&& message) override;
+
+  // MemcachedProxy::ConnPool::PoolCallbacks
+  void onResponse(MessagePtr&&) override;
+  void onFailure() override {}
 private:
   MemcachedProxyStats generateStats(const std::string& prefix, Stats::Scope& scope) {
     return MemcachedProxyStats{ALL_MEMCACHED_PROXY_STATS(POOL_COUNTER_PREFIX(scope, prefix),
-                                                 POOL_GAUGE_PREFIX(scope, prefix),
-                                                 POOL_HISTOGRAM_PREFIX(scope, prefix))};
+                                                 POOL_GAUGE_PREFIX(scope, prefix))};
   }
 
   std::string stat_prefix_;

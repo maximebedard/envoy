@@ -91,6 +91,7 @@ envoy_cc_library(
     hdrs = ["config.h"],
     deps = [
         ":proxy_lib",
+        ":conn_pool_lib",
         "//include/envoy/registry",
         "//source/extensions/filters/network:well_known_names",
         "//source/extensions/filters/network/common:factory_base_lib",

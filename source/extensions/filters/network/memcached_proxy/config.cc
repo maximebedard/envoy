@@ -25,18 +25,18 @@ Network::FilterFactoryCb ConfigFactory::createFilterFactoryFromProtoTyped(
   const std::string stat_prefix = fmt::format("memcached.{}.", proto_config.stat_prefix());
 
   auto conn_pool = std::make_shared<ConnPool::InstanceImpl>(
-      filter_config->cluster_name_, context.clusterManager(),
+      proto_config.cluster(), context.clusterManager(),
       ConnPool::ClientFactoryImpl::instance_, context.threadLocal(), proto_config.settings());
 
   return [stat_prefix, conn_pool, &context](Network::FilterManager& filter_manager) -> void {
     DecoderFactoryImpl factory;
-    filter_manager.addFilter(std::make_shared<ProxyFilter>(
+    filter_manager.addReadFilter(std::make_shared<ProxyFilter>(
         stat_prefix, context.scope(),
-        conn_pool,
+        *conn_pool,
         // context.runtime(),
         // context.drainDecision(), context.random(),
         // context.dispatcher().timeSource(),
-         factory, std::make_unique<BinEncoderImpl>()));
+         factory, std::make_unique<BinaryEncoderImpl>()));
   };
 }
 

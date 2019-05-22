@@ -18,8 +18,8 @@ ConfigImpl::ConfigImpl(
     : op_timeout_(PROTOBUF_GET_MS_REQUIRED(config, op_timeout)) {}
 
 ClientPtr ClientImpl::create(Upstream::HostConstSharedPtr host, Event::Dispatcher& dispatcher,
-                             Common::Redis::EncoderPtr&& encoder,
-                             Common::Redis::DecoderFactory& decoder_factory, const Config& config) {
+                             EncoderPtr&& encoder,
+                             DecoderFactory& decoder_factory, const Config& config) {
 
   std::unique_ptr<ClientImpl> client(
       new ClientImpl(host, dispatcher, std::move(encoder), decoder_factory, config));
@@ -32,8 +32,8 @@ ClientPtr ClientImpl::create(Upstream::HostConstSharedPtr host, Event::Dispatche
 }
 
 ClientImpl::ClientImpl(Upstream::HostConstSharedPtr host, Event::Dispatcher& dispatcher,
-                       Common::Redis::EncoderPtr&& encoder,
-                       Common::Redis::DecoderFactory& decoder_factory, const Config& config)
+                       EncoderPtr&& encoder,
+                       DecoderFactory& decoder_factory, const Config& config)
     : host_(host), encoder_(std::move(encoder)), decoder_(decoder_factory.create(*this)),
       config_(config),
       connect_or_op_timer_(dispatcher.createTimer([this]() -> void { onConnectOrOpTimeout(); })) {
@@ -53,12 +53,12 @@ ClientImpl::~ClientImpl() {
 
 void ClientImpl::close() { connection_->close(Network::ConnectionCloseType::NoFlush); }
 
-PoolRequest* ClientImpl::makeRequest(const Common::Redis::RespValue& request,
+PoolRequest* ClientImpl::makeRequest(const Message& request,
                                      PoolCallbacks& callbacks) {
   ASSERT(connection_->state() == Network::Connection::State::Open);
 
   pending_requests_.emplace_back(*this, callbacks);
-  encoder_->encode(request, encoder_buffer_);
+  encoder_->encodeMessage(request, encoder_buffer_);
   connection_->write(encoder_buffer_, false);
 
   // Only boost the op timeout if:
@@ -89,8 +89,8 @@ void ClientImpl::onConnectOrOpTimeout() {
 
 void ClientImpl::onData(Buffer::Instance& data) {
   try {
-    decoder_->decode(data);
-  } catch (Common::Redis::ProtocolError&) {
+    decoder_->onData(data);
+  } catch (ProtocolError&) {
     putOutlierEvent(Upstream::Outlier::Result::REQUEST_FAILED);
     host_->cluster().stats().upstream_cx_protocol_error_.inc();
     host_->stats().rq_error_.inc();
@@ -141,7 +141,7 @@ void ClientImpl::onEvent(Network::ConnectionEvent event) {
   }
 }
 
-void ClientImpl::onRespValue(Common::Redis::RespValuePtr&& value) {
+void ClientImpl::decodeMessage(MessagePtr&& value) {
   ASSERT(!pending_requests_.empty());
   PendingRequest& request = pending_requests_.front();
   if (!request.canceled_) {
@@ -187,7 +187,7 @@ ClientFactoryImpl ClientFactoryImpl::instance_;
 ClientPtr ClientFactoryImpl::create(Upstream::HostConstSharedPtr host,
                                     Event::Dispatcher& dispatcher, const Config& config) {
   return ClientImpl::create(host, dispatcher,
-                            Common::Redis::EncoderPtr{new Common::Redis::EncoderImpl()},
+                            std::make_unique<BinaryEncoderImpl>(),
                             decoder_factory_, config);
 }
 
@@ -203,7 +203,7 @@ InstanceImpl::InstanceImpl(
 }
 
 PoolRequest* InstanceImpl::makeRequest(const std::string& key,
-                                       const Common::Redis::RespValue& value,
+                                       const Message& value,
                                        PoolCallbacks& callbacks) {
   return tls_->getTyped<ThreadLocalPool>().makeRequest(key, value, callbacks);
 }
@@ -277,7 +277,7 @@ void InstanceImpl::ThreadLocalPool::onHostsRemoved(
 }
 
 PoolRequest* InstanceImpl::ThreadLocalPool::makeRequest(const std::string& key,
-                                                        const Common::Redis::RespValue& request,
+                                                        const Message& request,
                                                         PoolCallbacks& callbacks) {
   if (cluster_ == nullptr) {
     ASSERT(client_map_.empty());

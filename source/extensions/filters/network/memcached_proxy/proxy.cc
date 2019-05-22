@@ -23,8 +23,8 @@ namespace MemcachedProxy {
 
 ProxyFilter::ProxyFilter(
   const std::string& stat_prefix,
-  ConnPool::Instance& conn_pool,
   Stats::Scope& scope,
+  ConnPool::Instance& conn_pool,
   // Runtime::Loader& runtime,
   // const Network::DrainDecision& drain_decision,
   // Runtime::RandomGenerator& generator,
@@ -41,60 +41,13 @@ ProxyFilter::ProxyFilter(
       // time_source_(time_source),
       decoder_(factory.create(*this)), encoder_(std::move(encoder)) {}
 
-void ProxyFilter::decodeGet(GetRequestPtr&& request) {
-  stats_.op_get_.inc();
-  ENVOY_LOG(trace, "decoded `GET` key={}", request->key());
+void ProxyFilter::decodeMessage(MessagePtr&& message) {
+  if (message->key().empty()) {
+    throw EnvoyException("key can't be empty");
+  }
+  conn_pool_.makeRequest(message->key(), *message, *this);
 }
 
-void ProxyFilter::decodeGetk(GetkRequestPtr&& request) {
-  stats_.op_getk_.inc();
-  ENVOY_LOG(trace, "decoded `GETK` key={}", request->key());
-}
-
-void ProxyFilter::decodeDelete(DeleteRequestPtr&& request) {
-  stats_.op_delete_.inc();
-  ENVOY_LOG(trace, "decoded `DELETE` key={}", request->key());
-}
-
-void ProxyFilter::decodeSet(SetRequestPtr&& request) {
-  stats_.op_set_.inc();
-  ENVOY_LOG(trace, "decoded `SET` key={}, body={}", request->key(), request->body());
-}
-
-void ProxyFilter::decodeAdd(AddRequestPtr&& request) {
-  stats_.op_add_.inc();
-  ENVOY_LOG(trace, "decoded `ADD` key={}, body={}", request->key(), request->body());
-}
-
-void ProxyFilter::decodeReplace(ReplaceRequestPtr&& request) {
-  stats_.op_replace_.inc();
-  ENVOY_LOG(trace, "decoded `REPLACE` key={}, body={}", request->key(), request->body());
-}
-
-void ProxyFilter::decodeIncrement(IncrementRequestPtr&& request) {
-  stats_.op_increment_.inc();
-  ENVOY_LOG(trace, "decoded `INCREMENT` key={}, amount={}, initial_value={}", request->key(), request->amount(), request->initialValue());
-}
-
-void ProxyFilter::decodeDecrement(DecrementRequestPtr&& request) {
-  stats_.op_decrement_.inc();
-  ENVOY_LOG(trace, "decoded `DECREMENT` key={}, amount={}, initial_value={}", request->key(), request->amount(), request->initialValue());
-}
-
-void ProxyFilter::decodeAppend(AppendRequestPtr&& request) {
-  stats_.op_append_.inc();
-  ENVOY_LOG(trace, "decoded `APPEND` key={}, body={}", request->key(), request->body());
-}
-
-void ProxyFilter::decodePrepend(PrependRequestPtr&& request) {
-  stats_.op_prepend_.inc();
-  ENVOY_LOG(trace, "decoded `PREPEND` key={}, body={}", request->key(), request->body());
-}
-
-void ProxyFilter::decodeVersion(VersionRequestPtr&&) {
-  stats_.op_version_.inc();
-  ENVOY_LOG(trace, "decoded `VERSION`");
-}
 
 void ProxyFilter::onEvent(Network::ConnectionEvent event) {
   if (event == Network::ConnectionEvent::RemoteClose ||
@@ -114,34 +67,46 @@ void ProxyFilter::onEvent(Network::ConnectionEvent event) {
   // }
 }
 
+void ProxyFilter::onResponse(MessagePtr&& message) {
+  encoder_->encodeMessage(*message, write_buffer_);
+
+  if (write_buffer_.length() > 0) {
+    read_callbacks_->connection().write(write_buffer_, false);
+  }
+
+  read_callbacks_->connection().close(Network::ConnectionCloseType::FlushWrite);
+  // encoder_->encode(message, encoder_buffer_);
+}
+
 Network::FilterStatus ProxyFilter::onData(Buffer::Instance& data, bool) {
-  ENVOY_LOG(info, "downstream -> upstream => bytes={}", data.length());
-  read_buffer_.add(data);
-
   try {
-    decoder_->onData(read_buffer_);
-  } catch (EnvoyException& e) {
-    ENVOY_LOG(info, "memcached decoding error: {}", e.what());
-    stats_.decoding_error_.inc();
+    decoder_->onData(data);
+    return Network::FilterStatus::Continue;
+  } catch (ProtocolError&) {
+    stats_.downstream_cx_protocol_error_.inc();
+    // Common::Redis::RespValue error;
+    // error.type(Common::Redis::RespType::Error);
+    // error.asString() = "downstream protocol error";
+    // encoder_->encode(error, encoder_buffer_);
+    // callbacks_->connection().write(encoder_buffer_, false);
+    // callbacks_->connection().close(Network::ConnectionCloseType::NoFlush);
+    return Network::FilterStatus::StopIteration;
   }
-
-  // blindly forward the data upstream
-  return Network::FilterStatus::Continue;
 }
 
-Network::FilterStatus ProxyFilter::onWrite(Buffer::Instance& data, bool) {
-  ENVOY_LOG(info, "upstream -> downstream => bytes={}", data.length());
-  write_buffer_.add(data);
+// Network::FilterStatus ProxyFilter::onWrite(Buffer::Instance& data, bool) {
+//   ENVOY_LOG(info, "upstream -> downstream => bytes={}", data.length());
+//   write_buffer_.add(data);
 
-  try {
-    decoder_->onData(write_buffer_);
-  } catch (EnvoyException& e) {
-    ENVOY_LOG(info, "memcached decoding error: {}", e.what());
-    stats_.decoding_error_.inc();
-  }
+//   try {
+//     decoder_->onData(write_buffer_);
+//   } catch (EnvoyException& e) {
+//     ENVOY_LOG(info, "memcached decoding error: {}", e.what());
+//     stats_.decoding_error_.inc();
+//   }
 
-  return Network::FilterStatus::Continue;
-}
+//   return Network::FilterStatus::Continue;
+// }
 
 }
 }
