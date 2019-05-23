@@ -34,7 +34,7 @@ Network::FilterFactoryCb ConfigFactory::createFilterFactoryFromProtoTyped(
         stat_prefix, context.scope(),
         *conn_pool,
         // context.runtime(),
-        // context.drainDecision(), context.random(),
+        context.drainDecision(), // context.random(),
         // context.dispatcher().timeSource(),
          factory, std::make_unique<BinaryEncoderImpl>()));
   };
