@@ -30,8 +30,7 @@ def setq(key, value, cas = 0, ttl = 0, flags = 0)
   [REQUEST, OPCODES[:setq], key.bytesize, 8, 0, 0, value.bytesize + key.bytesize + 8, 0, cas, flags, ttl, key, value].pack(FORMAT[:setq])
 end
 
-2.times { print(set("foo", "bar")) }
-
+print(set("foo", "bar"))
 # print(getq("bar"))
 # 10.times { print(getq("foo")); print(getq("bar")) }
 
