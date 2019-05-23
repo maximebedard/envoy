@@ -67,6 +67,7 @@ bool DecoderImpl::decode(Buffer::Instance& data) {
     return false;
   }
 
+  // TODO: make sure casting are safe.
   auto type = static_cast<Message::Type>(data.drainBEInt<uint8_t>());
   auto op_code = static_cast<Message::OpCode>(data.drainBEInt<uint8_t>());
   auto key_length = data.drainBEInt<uint16_t>();
