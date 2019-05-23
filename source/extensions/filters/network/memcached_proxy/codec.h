@@ -84,11 +84,12 @@ public:
 //     return typeNames()[i];
 //   }
 
-// private:
+private:
 // #define DECLARE_STRING(K, ...) #K,
 //   static const std::vector<std::string>& opCodeNames() {
-//     CONSTRUCT_ON_FIRST_USE(std::vector<std::string>, {OP_CODE_ENUM_VALUES(DECLARE_STRING)});
+//     CONSTRUCT_ON_FIRST_USE(std::map<uint8_t, std::string>, {OP_CODE_ENUM_VALUES(DECLARE_STRING)});
 //   }
+// #undef DECLARE_STRING
 
 //   static const std::vector<std::string>& typeNames() {
 //     CONSTRUCT_ON_FIRST_USE(std::vector<std::string>, {TYPE_ENUM_VALUES(DECLARE_STRING)});

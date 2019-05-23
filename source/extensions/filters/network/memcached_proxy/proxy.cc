@@ -94,20 +94,6 @@ Network::FilterStatus ProxyFilter::onData(Buffer::Instance& data, bool) {
   }
 }
 
-// Network::FilterStatus ProxyFilter::onWrite(Buffer::Instance& data, bool) {
-//   ENVOY_LOG(info, "upstream -> downstream => bytes={}", data.length());
-//   write_buffer_.add(data);
-
-//   try {
-//     decoder_->onData(write_buffer_);
-//   } catch (EnvoyException& e) {
-//     ENVOY_LOG(info, "memcached decoding error: {}", e.what());
-//     stats_.decoding_error_.inc();
-//   }
-
-//   return Network::FilterStatus::Continue;
-// }
-
 }
 }
 }
