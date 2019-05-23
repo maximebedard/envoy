@@ -41,6 +41,11 @@ namespace MemcachedProxy {
   COUNTER(downstream_cx_tx_bytes_total)                                                            \
   GAUGE  (downstream_cx_tx_bytes_buffered)                                                         \
   COUNTER(downstream_cx_protocol_error)                                                            \
+  COUNTER(downstream_cx_total)                                                                     \
+  GAUGE  (downstream_cx_active)                                                                    \
+  COUNTER(downstream_cx_drain_close)                                                               \
+  COUNTER(downstream_rq_total)                                                                     \
+  GAUGE  (downstream_rq_active)
 // clang-format on
 
 /**
@@ -56,14 +61,14 @@ struct MemcachedProxyStats {
  */
 class ProxyFilter : public Network::ReadFilter,
                     public DecoderCallbacks,
-                    public ConnPool::PoolCallbacks,
                     public Network::ConnectionCallbacks,
                     Logger::Loggable<Logger::Id::memcached> {
 public:
   ProxyFilter(const std::string& stat_prefix, Stats::Scope& scope,
             ConnPool::Instance& conn_pool,
             // Runtime::Loader& runtime,
-             // const Network::DrainDecision& drain_decision, Runtime::RandomGenerator& generator,
+             const Network::DrainDecision& drain_decision,
+            // Runtime::RandomGenerator& generator,
               // TimeSource& time_source,
               DecoderFactory& factory, EncoderPtr&& encoder);
   ~ProxyFilter() = default;
@@ -89,29 +94,47 @@ public:
   // MemcachedProxy::DecoderCallback
   void decodeMessage(MessagePtr&& message) override;
 
-  // MemcachedProxy::ConnPool::PoolCallbacks
-  void onResponse(MessagePtr&&) override;
-  void onFailure() override {}
 private:
   MemcachedProxyStats generateStats(const std::string& prefix, Stats::Scope& scope) {
     return MemcachedProxyStats{ALL_MEMCACHED_PROXY_STATS(POOL_COUNTER_PREFIX(scope, prefix),
                                                  POOL_GAUGE_PREFIX(scope, prefix))};
   }
 
+  struct PendingRequest : public ConnPool::PoolCallbacks {
+    PendingRequest(ProxyFilter& parent);
+    ~PendingRequest();
+
+    // MemcachedProxy::ConnPool::PoolCallbacks
+    void onResponse(MessagePtr&& message) override {
+      parent_.onResponse(*this, std::move(message));
+    }
+    void onFailure() override {
+      // TODO: make upstream failure error
+      // parent_.onResponse(*this, std::move(error));
+    }
+
+    ProxyFilter& parent_;
+    MessagePtr pending_response_;
+    ConnPool::PoolRequest* request_handle_;
+  };
+
+  void onResponse(PendingRequest& request, MessagePtr&& response);
+
   std::string stat_prefix_;
   // Stats::Scope& scope_;
   MemcachedProxyStats stats_;
   // Runtime::Loader& runtime_;
-  // const Network::DrainDecision& drain_decision_;
+  ConnPool::Instance& conn_pool_;
+  const Network::DrainDecision& drain_decision_;
   // Runtime::RandomGenerator& generator_;
   Buffer::OwnedImpl read_buffer_;
   Buffer::OwnedImpl write_buffer_;
   Network::ReadFilterCallbacks* read_callbacks_{};
   Event::TimerPtr drain_close_timer_;
   // TimeSource& time_source_;
-  ConnPool::Instance& conn_pool_;
   DecoderPtr decoder_;
   EncoderPtr encoder_;
+  std::list<PendingRequest> pending_requests_;
 };
 
 }
