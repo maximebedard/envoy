@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <map>
 
 #include "envoy/buffer/buffer.h"
 #include "common/common/macros.h"
@@ -72,11 +73,9 @@ public:
   virtual bool operator==(const Message& rhs) const PURE;
 
 //   // TODO: fix offset error :(
-//   static const std::string& opCodeName(OpCode op_code) {
-//     size_t i = static_cast<size_t>(op_code);
-//     ASSERT(i < opCodeNames().size());
-//     return opCodeNames()[i];
-//   }
+  static const std::string& opCodeName(OpCode op_code) {
+    return opCodeNames().at(static_cast<uint8_t>(op_code));
+  }
 
 //   static const std::string& typeName(Type type) {
 //     size_t i = static_cast<size_t>(type);
@@ -85,11 +84,12 @@ public:
 //   }
 
 private:
-// #define DECLARE_STRING(K, ...) #K,
-//   static const std::vector<std::string>& opCodeNames() {
-//     CONSTRUCT_ON_FIRST_USE(std::map<uint8_t, std::string>, {OP_CODE_ENUM_VALUES(DECLARE_STRING)});
-//   }
-// #undef DECLARE_STRING
+#define DECLARE_STRING(K, V) std::make_pair(V, #K),
+  typedef std::map<uint8_t, std::string> OpCodeNames;
+  static const OpCodeNames& opCodeNames() {
+    CONSTRUCT_ON_FIRST_USE(OpCodeNames, {OP_CODE_ENUM_VALUES(DECLARE_STRING)});
+  }
+#undef DECLARE_STRING
 
 //   static const std::vector<std::string>& typeNames() {
 //     CONSTRUCT_ON_FIRST_USE(std::vector<std::string>, {TYPE_ENUM_VALUES(DECLARE_STRING)});

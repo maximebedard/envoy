@@ -62,7 +62,7 @@ void MessageImpl::quiet(bool) {
 }
 
 bool DecoderImpl::decode(Buffer::Instance& data) {
-  ENVOY_LOG(info, "decoding {} bytes", data.length());
+  ENVOY_LOG(trace, "decoding {} bytes", data.length());
   if (data.length() < Message::HeaderLength) {
     return false;
   }
@@ -85,10 +85,15 @@ bool DecoderImpl::decode(Buffer::Instance& data) {
   auto body = BufferHelper::drainString(data, body_length);
 
   auto message = std::make_unique<MessageImpl>(type, op_code, data_type, vbucket_id_or_status, opaque, cas, key, extras, body);
-  ENVOY_LOG(info, "decoded {} {:#04x} key={}, cas={}, body={}", message->type() == Message::Type::V1_RESPONSE ? "response" : "request", static_cast<uint8_t>(message->opCode()), message->key().empty() ? "N/A" : message->key(), message->cas(), message->body().empty() ? "N/A" : message->body());
+  ENVOY_LOG(info, "decoded {} {} key={}, cas={}, body={}",
+    message->type() == Message::Type::V1_RESPONSE ? "<" : ">",
+    Message::opCodeName(message->opCode()),
+    message->key().empty() ? "N/A" : message->key(),
+    message->cas(),
+    message->body().empty() ? "N/A" : message->body());
   callbacks_.decodeMessage(std::move(message));
 
-  ENVOY_LOG(info, "{} bytes remaining after decoding", data.length());
+  ENVOY_LOG(trace, "{} bytes remaining after decoding", data.length());
   return true;
 }
 
